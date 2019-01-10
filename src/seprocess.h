@@ -69,6 +69,11 @@ public:
 	void create_thread_outputFile(int index);
 	void* sub_thread_nonssd_realMultiThreads(int index);
 	void create_thread_read(int index);
+	void run_extract_random();
+	void process_some_reads(int index,int out_number);
+	void merge_stat(int index);
+	void merge_data(int index);
+	void limit_process_reads(int index,vector<C_fastq> &fq1s,gzFile gzfq1);
 	//void peOutput(outputOption opt);
 public:
 	C_global_parameter gp;
@@ -94,6 +99,7 @@ public:
 	char* src1;
 	int fq1fd;
 	gzFile multi_gzfq1[max_thread];
+	int limit_end;
 private:
 	vector<C_fastq> fq1s;
 	vector<C_fastq> trim_output_fq1;
