@@ -64,6 +64,9 @@ public:
 	void get_line_number(int* line_num);
 	void merge_stat();
 	void merge_data();
+	void merge_trim_data();
+	void merge_clean_data();
+	void merge_clean_data(int index);
 	void C_fastq_init(C_fastq& a,C_fastq& b);
 	void process_nonssd();
 	void* sub_thread_nonssd(int index);
@@ -80,6 +83,8 @@ public:
 	void* monitor_write_thread();
 	void create_thread_read(int index);
 	void create_thread_outputFile(int index);
+	void create_thread_trimoutputFile(int index);
+	void create_thread_cleanoutputFile(int index);
 	void thread_process_reads(int index,vector<C_fastq> &fq1s,vector<C_fastq> &fq2s);
 	void run_cmd(string cmd);
 	void run_extract_random();
