@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <math.h>
 #include "seprocess.h"
 #include "process_argv.h"
 #include "zlib.h"
@@ -1379,13 +1380,13 @@ void seProcess::run_extract_random(){
 void seProcess::process_some_reads(int index,int out_number){
 	//open target fq file
 	ostringstream target_file_fq1;
-	target_file_fq1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<gp.clean_fq1;
+	target_file_fq1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<".clean.r1.fq.gz";
 	int file_reads_number=se_local_clean_stat1[index].gs.reads_number;
 	se_local_clean_stat1[index].clear();
 	if(file_reads_number==out_number){
 		return;
 	}
-	int times=file_reads_number/out_number;
+	int times=(int)floor(file_reads_number/out_number);
 	gzFile tmp_fq1=gzopen(target_file_fq1.str().c_str(),"rb");
 	gzsetparams(tmp_fq1, 2, Z_DEFAULT_STRATEGY);
 	gzbuffer(tmp_fq1,2048*2048);

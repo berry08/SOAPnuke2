@@ -10,6 +10,7 @@
 #include <sstream>
 #include <time.h>
 #include <dirent.h>
+#include <math.h>
 #include "peprocess.h"
 #include "process_argv.h"
 #include "zlib.h"
@@ -2078,8 +2079,8 @@ void peProcess::run_extract_random(){
 void peProcess::process_some_reads(int index,int out_number){
 	//open target fq file
 	ostringstream target_file_fq1,target_file_fq2;
-	target_file_fq1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<gp.clean_fq1;
-	target_file_fq2<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<gp.clean_fq2;
+	target_file_fq1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<".clean.r1.fq.gz";
+	target_file_fq2<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<".clean.r2.fq.gz";
 	int file_reads_number=local_clean_stat1[index].gs.reads_number;
 	local_clean_stat1[index].clear();
 	local_clean_stat2[index].clear();
@@ -2088,7 +2089,7 @@ void peProcess::process_some_reads(int index,int out_number){
 		return;
 	}
 
-	int times=file_reads_number/out_number;
+	int times=(int)floor(file_reads_number/out_number);
 	gzFile tmp_fq1=gzopen(target_file_fq1.str().c_str(),"rb");
 	gzFile tmp_fq2=gzopen(target_file_fq2.str().c_str(),"rb");
 	gzsetparams(tmp_fq1, 2, Z_DEFAULT_STRATEGY);
