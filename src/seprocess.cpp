@@ -1369,7 +1369,7 @@ void seProcess::run_extract_random(){
 		print_stat();
 		merge_clean_data(last_thread);
 	}else{
-		merge_stat();
+		merge_stat(last_thread);
 		print_stat();
 		merge_clean_data();
 	}
@@ -1753,7 +1753,7 @@ void seProcess::output_split_fastqs(string type,vector<C_fastq> &fq1){
 				return;
 			}
 			ostringstream out_fq1;
-			out_fq1<<gp.output_dir<<"/split."<<idx<<"."<<gp.clean_fq1;
+			out_fq1<<gp.output_dir<<"/split."<<idx<<".clean.r1.fq.gz";
 			if(gp.total_reads_num_random==false && gp.l_total_reads_num>0){
 				string fq1_whole_path=gp.output_dir+"/"+gp.clean_fq1;
 				gz_fq_se=gzopen(fq1_whole_path.c_str(),"wb");

@@ -2068,7 +2068,7 @@ void peProcess::run_extract_random(){
 		print_stat();
 		merge_clean_data(last_thread);
 	}else{
-		merge_stat();
+		merge_stat(last_thread);
 		print_stat();
 		merge_clean_data();
 	}
