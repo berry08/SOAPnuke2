@@ -1225,7 +1225,7 @@ void seProcess::process_nonssd(){
 		if(!gp.trim_fq1.empty()){
 			remove_tmpDir();
 		}
-		if(gp.output_clean>0){
+		if(gp.output_clean>0 || gp.l_total_reads_num>0){
 			gzclose(gz_fq_se);
 		}
 	}
@@ -1360,7 +1360,8 @@ void seProcess::run_extract_random(){
 			break;
 		}
 	}
-	
+	if(cur_total<=gp.l_total_reads_num)
+		last_thread=gp.threads_num-1;
 	//create the last patch clean fq file and stat
 	//cout<<"last thread\t"<<last_thread<<endl;
 	if(sticky_end>0){
@@ -1581,7 +1582,7 @@ void seProcess::process(){
 		if(!gp.trim_fq1.empty()){
 			remove_tmpDir();
 		}
-		if(gp.output_clean>0){
+		if(gp.output_clean>0 || gp.l_total_reads_num>0){
 			gzclose(gz_fq_se);
 		}
 	}
@@ -1632,7 +1633,7 @@ void seProcess::make_tmpDir(){
 		int tmp_rand=random(26)+'A';
 		tmp_str<<(char)tmp_rand;
 	}
-	tmp_dir=tmp_str.str();
+	tmp_dir="TMP"+tmp_str.str();
 	string mkdir_str="mkdir -p "+gp.output_dir+"/"+tmp_dir;
 	if(system(mkdir_str.c_str())==-1){
 		cerr<<"Error:mkdir error,"<<mkdir_str<<endl;

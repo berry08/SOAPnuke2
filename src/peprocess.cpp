@@ -1993,6 +1993,8 @@ void peProcess::process_nonssd(){
 	for(int i=0;i<gp.threads_num;i++){
 		t_array[i].join();
 	}
+	//gzclose(gz_fq1);
+	//gzclose(gz_fq2);
 	//read_monitor.join();
 	if(gp.total_reads_num_random==true && gp.total_reads_num>0){
 		run_extract_random();
@@ -2014,7 +2016,7 @@ void peProcess::process_nonssd(){
 		if(!gp.trim_fq1.empty()){
 			remove_tmpDir();
 		}
-		if(gp.output_clean>0){
+		if(gp.output_clean>0 || gp.l_total_reads_num>0){
 			gzclose(gz_fq1);
 			gzclose(gz_fq2);
 		}
@@ -2052,16 +2054,15 @@ void peProcess::run_extract_random(){
 	unsigned long long cur_total(0);
 	for(int i=0;i!=gp.threads_num;i++){
 		cur_total+=local_clean_stat1[i].gs.reads_number;
-		//cout<<local_clean_stat1[i].gs.reads_number<<"\t"<<cur_total<<"\t"<<gp.l_total_reads_num<<endl;
 		if(cur_total>gp.l_total_reads_num){
 			last_thread=i;
 			sticky_end=local_clean_stat1[i].gs.reads_number-(cur_total-gp.l_total_reads_num);
 			break;
 		}
 	}
-	
+	if(cur_total<=gp.l_total_reads_num)
+		last_thread=gp.threads_num-1;
 	//create the last patch clean fq file and stat
-	//cout<<"last thread\t"<<last_thread<<endl;
 	if(sticky_end>0){
 		process_some_reads(last_thread,sticky_end);
 		merge_stat(last_thread);
@@ -2225,7 +2226,7 @@ void peProcess::make_tmpDir(){
 		int tmp_rand=random(26)+'A';
 		tmp_str<<(char)tmp_rand;
 	}
-	tmp_dir=tmp_str.str();
+	tmp_dir="TMP"+tmp_str.str();
 	string mkdir_str="mkdir -p "+gp.output_dir+"/"+tmp_dir;
 	if(system(mkdir_str.c_str())==-1){
 		cerr<<"Error:mkdir error,"<<mkdir_str<<endl;
@@ -2409,7 +2410,7 @@ void peProcess::process(){
 		if(!gp.trim_fq1.empty()){
 			remove_tmpDir();
 		}
-		if(gp.output_clean>0){
+		if(gp.output_clean>0 || gp.l_total_reads_num>0){
 			gzclose(gz_fq1);
 			gzclose(gz_fq2);
 		}
