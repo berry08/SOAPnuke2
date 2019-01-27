@@ -1225,7 +1225,7 @@ void seProcess::process_nonssd(){
 		if(!gp.trim_fq1.empty()){
 			remove_tmpDir();
 		}
-		if(gp.output_clean>0 || gp.l_total_reads_num>0){
+		if(limit_end==0 && (gp.output_clean>0 || gp.l_total_reads_num>0)){
 			gzclose(gz_fq_se);
 		}
 	}
@@ -1582,7 +1582,7 @@ void seProcess::process(){
 		if(!gp.trim_fq1.empty()){
 			remove_tmpDir();
 		}
-		if(gp.output_clean>0 || gp.l_total_reads_num>0){
+		if(limit_end==0 && (gp.output_clean>0 || gp.l_total_reads_num>0)){
 			gzclose(gz_fq_se);
 		}
 	}

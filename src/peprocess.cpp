@@ -2004,7 +2004,6 @@ void peProcess::process_nonssd(){
 		return;
 	}
 	merge_stat_nonssd();
-	
 	print_stat();
 	if(!gp.trim_fq1.empty()){
 		merge_trim_data();
@@ -2016,7 +2015,7 @@ void peProcess::process_nonssd(){
 		if(!gp.trim_fq1.empty()){
 			remove_tmpDir();
 		}
-		if(gp.output_clean>0 || gp.l_total_reads_num>0){
+		if(limit_end==0 && (gp.output_clean>0 || gp.l_total_reads_num>0)){
 			gzclose(gz_fq1);
 			gzclose(gz_fq2);
 		}
@@ -2410,7 +2409,7 @@ void peProcess::process(){
 		if(!gp.trim_fq1.empty()){
 			remove_tmpDir();
 		}
-		if(gp.output_clean>0 || gp.l_total_reads_num>0){
+		if(limit_end==0 && (gp.output_clean>0 || gp.l_total_reads_num>0)){
 			gzclose(gz_fq1);
 			gzclose(gz_fq2);
 		}
