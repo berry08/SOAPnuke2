@@ -5,7 +5,7 @@
 //#include <map>
 using namespace::std;
 #define READ_MAX_LEN 500
-#define MAX_QUAL 42
+#define MAX_QUAL 45
 #define MIN_QUAL -1
 class C_filter_stat{
 public:

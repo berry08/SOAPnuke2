@@ -240,8 +240,9 @@ void seProcess::print_stat(){
 	int max_qual=0;
 	for(int i=0;i<gv.raw1_stat.gs.read_length;i++){
 		for(int j=1;j<=MAX_QUAL;j++){
-			if(gv.raw1_stat.qs.position_qual[i][j]>0)
-				max_qual=j;
+			if(gv.raw1_stat.qs.position_qual[i][j]>0){
+				max_qual=max_qual>j?max_qual:j;
+			}
 		}
 	}
 	for(int i=0;i<=max_qual;i++){
@@ -380,7 +381,7 @@ void seProcess::update_stat(C_fastq_file_stat& fq1s_stat,C_filter_stat& fs_stat,
 		for(int i=0;i!=gv.raw1_stat.gs.read_length;i++){
 			for(int j=1;j<=MAX_QUAL;j++){
 				if(fq1s_stat.qs.position_qual[i][j]>0)
-					max_qual=j;
+					max_qual=max_qual>j?max_qual:j;
 			}
 		}
 		
@@ -440,7 +441,7 @@ void seProcess::update_stat(C_fastq_file_stat& fq1s_stat,C_filter_stat& fs_stat,
 		for(int i=0;i!=gv.trim1_stat.gs.read_max_length;i++){
 			for(int j=1;j<=MAX_QUAL;j++){
 				if(fq1s_stat.qs.position_qual[i][j]>0)
-					max_qual=j;
+					max_qual=max_qual>j?max_qual:j;
 			}
 		}
 		for(int i=0;i!=gv.trim1_stat.gs.read_max_length;i++){
@@ -487,7 +488,7 @@ void seProcess::update_stat(C_fastq_file_stat& fq1s_stat,C_filter_stat& fs_stat,
 		for(int i=0;i!=gv.clean1_stat.gs.read_max_length;i++){
 			for(int j=1;j<=MAX_QUAL;j++){
 				if(fq1s_stat.qs.position_qual[i][j]>0)
-					max_qual=j;
+					max_qual=max_qual>j?max_qual:j;
 			}
 		}
 		for(int i=0;i!=gv.clean1_stat.gs.read_max_length;i++){
