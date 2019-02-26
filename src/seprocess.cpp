@@ -117,57 +117,6 @@ void seProcess::print_stat(){
 			of_filter_stat<<setprecision(2)<<100*(float)filter_number[*ix]/total_filter_fq1_num<<"%"<<endl;
 		}
 	}
-	/*of_filter_stat<<"Reads too short\t\t\t"<<gv.fs.short_len_num<<"\t";
-	if(total_filter_fq1_num==0){
-		of_filter_stat<<"0%"<<"\t\t";
-	}else{
-		of_filter_stat<<setprecision(2)<<100*(float)gv.fs.short_len_num/total_filter_fq1_num<<"%"<<endl;
-	}
-	of_filter_stat<<"Reads with contam sequence\t"<<gv.fs.include_contam_seq_num<<"\t";
-	if(gv.fs.include_contam_seq_num==0){
-		of_filter_stat<<"0%"<<endl;
-	}else{
-		of_filter_stat<<setprecision(2)<<100*(float)gv.fs.include_contam_seq_num/total_filter_fq1_num<<"%"<<endl;
-	}
-
-	of_filter_stat<<"Reads with adapter\t"<<gv.fs.include_adapter_seq_num<<"\t";
-	if(gv.fs.include_adapter_seq_num==0){
-		of_filter_stat<<"0%"<<endl;
-	}else{
-		of_filter_stat<<setprecision(2)<<100*(float)gv.fs.include_adapter_seq_num/total_filter_fq1_num<<"%"<<endl;
-	}
-	of_filter_stat<<"Reads with low quality\t"<<gv.fs.low_qual_base_ratio_num<<"\t";
-	if(gv.fs.include_adapter_seq_num==0){
-		of_filter_stat<<"0%"<<endl;
-	}else{
-		of_filter_stat<<setprecision(2)<<100*(float)gv.fs.low_qual_base_ratio_num/total_filter_fq1_num<<"%"<<endl;
-	}
-	of_filter_stat<<"Reads with low mean quality\t"<<gv.fs.mean_quality_num<<"\t";
-	if(gv.fs.include_adapter_seq_num==0){
-		of_filter_stat<<"0%"<<endl;
-	}else{
-		of_filter_stat<<setprecision(2)<<100*(float)gv.fs.mean_quality_num/total_filter_fq1_num<<"%"<<endl;
-	}
-	of_filter_stat<<"Read with n rate exceed\t"<<gv.fs.n_ratio_num<<"\t";
-	if(gv.fs.include_adapter_seq_num==0){
-		of_filter_stat<<"0%"<<endl;
-	}else{
-		of_filter_stat<<setprecision(2)<<100*(float)gv.fs.n_ratio_num/total_filter_fq1_num<<"%"<<endl;
-	}
-	of_filter_stat<<"Read with small insert size\t"<<gv.fs.over_lapped_num<<"\t";
-	if(gv.fs.include_adapter_seq_num==0){
-		of_filter_stat<<"0%"<<endl;
-	}else{
-		of_filter_stat<<setprecision(2)<<100*(float)gv.fs.over_lapped_num/total_filter_fq1_num<<"%"<<endl;
-	}
-	of_filter_stat<<"Reads with highA\t"<<gv.fs.highA_num<<"\t";
-	if(gv.fs.include_adapter_seq_num==0){
-		of_filter_stat<<"0%"<<endl;
-	}else{
-		of_filter_stat<<setprecision(2)<<100*(float)gv.fs.highA_num/total_filter_fq1_num<<"%"<<endl;
-	}
-	of_filter_stat.close();
-	*/
 	of_general_stat<<"Item\traw reads(fq1)\tclean reads(fq1)"<<endl;
 
 	float raw1_rl(0),clean1_rl(0);
@@ -251,7 +200,7 @@ void seProcess::print_stat(){
 	}
 	of_readPos_qual_stat1<<"Mean\tMedian\tLower quartile\tUpper quartile\t10th percentile\t90th percentile"<<endl;
 	
-	float raw1_q20[gv.raw1_stat.gs.read_length],raw1_q30[gv.raw1_stat.gs.read_length];
+	float raw1_q20[gv.raw1_stat.gs.read_max_length],raw1_q30[gv.raw1_stat.gs.read_max_length];
 	float clean1_q20[gv.raw1_stat.gs.read_max_length],clean1_q30[gv.raw1_stat.gs.read_max_length];
 	for(int i=0;i!=gv.raw1_stat.gs.read_length;i++){
 		of_readPos_qual_stat1<<i+1<<"\t";
@@ -356,6 +305,9 @@ void seProcess::update_stat(C_fastq_file_stat& fq1s_stat,C_filter_stat& fs_stat,
 	if(type=="raw"){
 		if(gv.raw1_stat.gs.read_length==0)
 			gv.raw1_stat.gs.read_length=fq1s_stat.gs.read_length;	//generate stat
+		if(gv.raw1_stat.gs.read_max_length<fq1s_stat.gs.read_length){
+			gv.raw1_stat.gs.read_max_length=fq1s_stat.gs.read_length;
+		}
 		gv.raw1_stat.gs.reads_number+=fq1s_stat.gs.reads_number;
 		gv.raw1_stat.gs.base_number+=fq1s_stat.gs.base_number;
 		gv.raw1_stat.gs.a_number+=fq1s_stat.gs.a_number;
@@ -367,26 +319,26 @@ void seProcess::update_stat(C_fastq_file_stat& fq1s_stat,C_filter_stat& fs_stat,
 		gv.raw1_stat.gs.q30_num+=fq1s_stat.gs.q30_num;
 		string base_set="ACGTN";	//base content and quality along read position stat
 		int max_qual=0;
-		for(int i=0;i!=gv.raw1_stat.gs.read_length;i++){
+		for(int i=0;i!=gv.raw1_stat.gs.read_max_length;i++){
 			for(int j=0;j!=base_set.size();j++){
 				gv.raw1_stat.bs.position_acgt_content[i][j]+=fq1s_stat.bs.position_acgt_content[i][j];
 			}
 		}
-		for(int i=1;i<=gv.raw1_stat.gs.read_length;i++){
+		for(int i=1;i<=gv.raw1_stat.gs.read_max_length;i++){
 			gv.raw1_stat.ts.ht[i]+=fq1s_stat.ts.ht[i];
 			gv.raw1_stat.ts.hlq[i]+=fq1s_stat.ts.hlq[i];
 			gv.raw1_stat.ts.tt[i]+=fq1s_stat.ts.tt[i];
 			gv.raw1_stat.ts.tlq[i]+=fq1s_stat.ts.tlq[i];
 			gv.raw1_stat.ts.ta[i]+=fq1s_stat.ts.ta[i];
 		}
-		for(int i=0;i!=gv.raw1_stat.gs.read_length;i++){
+		for(int i=0;i!=gv.raw1_stat.gs.read_max_length;i++){
 			for(int j=1;j<=MAX_QUAL;j++){
 				if(fq1s_stat.qs.position_qual[i][j]>0)
 					max_qual=max_qual>j?max_qual:j;
 			}
 		}
 		
-		for(int i=0;i!=gv.raw1_stat.gs.read_length;i++){
+		for(int i=0;i!=gv.raw1_stat.gs.read_max_length;i++){
 			for(int j=0;j<=max_qual;j++){
 				gv.raw1_stat.qs.position_qual[i][j]+=fq1s_stat.qs.position_qual[i][j];
 			}
