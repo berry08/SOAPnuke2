@@ -197,17 +197,38 @@ C_fastq_stat_result stat_read(C_fastq& fq_read,C_global_parameter& gp){ //stat s
 	    	}
 	    }
 	    if(!gp.global_contams.empty()){
-	    	vector<int> global_contam_poses=hasGlobalContams(fq_read.sequence,gp);
-	    	for(vector<int>::iterator ix=global_contam_poses.begin();ix!=global_contam_poses.end();ix++){
+	    	vector<int> global_contam_5_poses=hasGlobalContams(fq_read.sequence,gp);
+	    	for(vector<int>::iterator ix=global_contam_5_poses.begin();ix!=global_contam_5_poses.end();ix++){
 	    		if(*ix>=0){
 	    			return_value.include_global_contam=1;
-	    			if(fq_read.global_contam_pos!=-1){
-	    				if(*ix<=fq_read.global_contam_pos){
-			    			fq_read.global_contam_pos=*ix;
+	    			if(fq_read.global_contam_5pos!=-1){
+	    				if(*ix<=fq_read.global_contam_5pos){
+			    			fq_read.global_contam_5pos=*ix;
 			    		}
 	    			}else{
-	    				fq_read.global_contam_pos=*ix;
+	    				fq_read.global_contam_5pos=*ix;
 	    			}
+	    		}
+	    	}
+	    	string reverse_ref=reversecomplementary(fq_read.sequence);
+	    	vector<int> global_contam_3_poses=hasGlobalContams(reverse_ref,gp);
+	    	for(vector<int>::iterator ix=global_contam_3_poses.begin();ix!=global_contam_3_poses.end();ix++){
+	    		if(*ix>=0){
+	    			return_value.include_global_contam=1;
+	    			if(fq_read.global_contam_3pos!=-1){
+	    				if(*ix<=fq_read.global_contam_3pos){
+			    			fq_read.global_contam_3pos=*ix;
+			    		}
+	    			}else{
+	    				fq_read.global_contam_3pos=*ix;
+	    			}
+	    		}
+	    	}
+	    	if(fq_read.global_contam_5pos>=0 && fq_read.global_contam_3pos>=0){
+	    		if(fq_read.global_contam_5pos<fq_read.global_contam_3pos){
+	    			fq_read.global_contam_5pos=-1;
+	    		}else{
+	    			fq_read.global_contam_3pos=-1;
 	    		}
 	    	}
 	    }
@@ -385,11 +406,14 @@ void fastq_trim(C_fastq& read,C_global_parameter& gp){	//	1.index_remove	2.adapt
 			}
 		}
 		if(contam_trim_flag){
-			if(read.global_contam_pos>=0 && read.sequence.size()-read.global_contam_pos>tail_cut){
-				tail_cut=read.sequence.size()-read.global_contam_pos;
+			if(read.global_contam_5pos>=0 && read.sequence.size()-read.global_contam_5pos>tail_cut){
+				tail_cut=read.sequence.size()-read.global_contam_5pos;
 			}
 			if(read.contam_pos>=0 && read.sequence.size()-read.contam_pos>tail_cut){
 				tail_cut=read.sequence.size()-read.contam_pos;
+			}
+			if(read.global_contam_3pos>=0 && read.sequence.size()-read.global_contam_3pos>head_cut){
+				head_cut=read.sequence.size()-read.global_contam_3pos;
 			}
 		}
 		if(gp.polyG_tail!=-1){
@@ -400,8 +424,14 @@ void fastq_trim(C_fastq& read,C_global_parameter& gp){	//	1.index_remove	2.adapt
 				}
 			}
 		}
-		read.sequence=read.sequence.substr(head_cut,read.sequence.size()-head_cut-tail_cut);
-		read.qual_seq=read.qual_seq.substr(head_cut,read.qual_seq.size()-head_cut-tail_cut);
+		if(head_cut+tail_cut>read.sequence.size()){
+			read.sequence="";
+			read.qual_seq="";
+		}else{
+			read.sequence=read.sequence.substr(head_cut,read.sequence.size()-head_cut-tail_cut);
+			read.qual_seq=read.qual_seq.substr(head_cut,read.qual_seq.size()-head_cut-tail_cut);
+		}
+		
 	}
 }
 int polyG_number(string& ref_sequence){

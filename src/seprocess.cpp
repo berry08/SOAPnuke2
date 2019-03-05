@@ -502,6 +502,7 @@ void* seProcess::stat_se_fqs(SEstatOption opt){
 		}
 		for(string::size_type i=0;i!=(*ix).qual_seq.size();i++){	//process quality sequence
 			int base_quality=((*ix).qual_seq)[i]-gp.qualityPhred;
+			/*
 			if(base_quality>MAX_QUAL){
 				cerr<<"Error:quality is too high,please check the quality system parameter or fastq file"<<endl;
 				exit(1);
@@ -510,6 +511,7 @@ void* seProcess::stat_se_fqs(SEstatOption opt){
 				cerr<<"Error:quality is too low,please check the quality system parameter or fastq file"<<endl;
 				exit(1);
 			}
+			*/
 			opt.stat1->qs.position_qual[i][base_quality]++;
 			if(base_quality>=20)
 				opt.stat1->gs.q20_num++;
@@ -688,7 +690,8 @@ void seProcess::C_fastq_init(C_fastq& a){
 	a.tail_lqcut=-1;
 	a.adacut_pos=-1;
 	a.contam_pos=-1;
-	a.global_contam_pos=-1;
+	a.global_contam_5pos=-1;
+	a.global_contam_3pos=-1;
 	a.raw_length=0;
 	if(gp.module_name=="filtersRNA"){
 		a.adapter_seq2=gp.adapter2_seq;
