@@ -199,6 +199,7 @@ C_fastq_stat_result stat_read(C_fastq& fq_read,C_global_parameter& gp){ //stat s
 	    if(!gp.global_contams.empty()){
 	    	vector<int> global_contam_5_poses=hasGlobalContams(fq_read.sequence,gp);
 	    	for(vector<int>::iterator ix=global_contam_5_poses.begin();ix!=global_contam_5_poses.end();ix++){
+	    		//cout<<"5pos:\t"<<*ix<<endl;
 	    		if(*ix>=0){
 	    			return_value.include_global_contam=1;
 	    			if(fq_read.global_contam_5pos!=-1){
@@ -213,6 +214,7 @@ C_fastq_stat_result stat_read(C_fastq& fq_read,C_global_parameter& gp){ //stat s
 	    	string reverse_ref=reversecomplementary(fq_read.sequence);
 	    	vector<int> global_contam_3_poses=hasGlobalContams(reverse_ref,gp);
 	    	for(vector<int>::iterator ix=global_contam_3_poses.begin();ix!=global_contam_3_poses.end();ix++){
+	    		//cout<<"3pos:\t"<<*ix<<endl;
 	    		if(*ix>=0){
 	    			return_value.include_global_contam=1;
 	    			if(fq_read.global_contam_3pos!=-1){
@@ -903,8 +905,10 @@ vector<int> hasGlobalContams(string& ref_sequence,C_global_parameter& gp){
 		float mr=atof(g_mr[i].c_str());
 		int mm=atoi(g_mm[i].c_str());
 		int pos=global_contam_pos(ref_sequence,g_contams[i],mr,mm);
+		//cout<<"forward:\t"<<g_contams[i]<<"\t"<<ref_sequence<<"\t"<<pos<<endl;
 		string reverse_contam=reversecomplementary(g_contams[i]);
 		int reverse_pos=global_contam_pos(ref_sequence,reverse_contam,mr,mm);
+		//cout<<"reverse:\t"<<reverse_contam<<"\t"<<ref_sequence<<"\t"<<reverse_pos<<endl;
 		int push_pos;
 		if(pos>=0){
 			if(reverse_pos>=0){
@@ -1113,8 +1117,8 @@ string reversecomplementary(string& a){	//get reverse complementary sequence
 	dna_base_pair['T']='A';
 	dna_base_pair['G']='C';
 	dna_base_pair['C']='G';
-	for(string::size_type ix=0;ix!=a.size();ix++){
-		char tmp_base=toupper(a[ix]);
+	for(string::reverse_iterator ix=a.rbegin();ix!=a.rend();ix++){
+		char tmp_base=toupper(*ix);
 		if(tmp_base=='N'){
 			b.insert(b.end(),tmp_base);
 		}else if(dna_base_pair.find(tmp_base)==dna_base_pair.end()){

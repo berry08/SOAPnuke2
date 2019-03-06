@@ -1328,7 +1328,6 @@ void peProcess::add_raw_trim(C_fastq_file_stat& a,C_fastq_file_stat& a2,C_reads_
 */
 void peProcess::thread_process_reads(int index,vector<C_fastq> &fq1s,vector<C_fastq> &fq2s){
 	vector<C_fastq> trim_result1,trim_result2,clean_result1,clean_result2;
-	
 	PEcalOption opt2;
 	opt2.local_fs=&local_fs[index];
 	opt2.fq1s=&fq1s;
@@ -1665,7 +1664,8 @@ void* peProcess::sub_thread(int index){	//sub thread in ssd mode
 				fastq2.qual_seq.insert(fastq2.qual_seq.end(),buf2[i]);
 			}
 		}
-		thread_process_reads(index,fq1s,fq2s);
+		if(fq1s.size()>0 && fq2s.size()>0)
+			thread_process_reads(index,fq1s,fq2s);
 		if(limit_end>0){
 			break;
 		}
