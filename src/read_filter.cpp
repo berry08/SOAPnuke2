@@ -211,20 +211,22 @@ C_fastq_stat_result stat_read(C_fastq& fq_read,C_global_parameter& gp){ //stat s
 	    			}
 	    		}
 	    	}
-	    	string reverse_ref=reversecomplementary(fq_read.sequence);
-	    	vector<int> global_contam_3_poses=hasGlobalContams(reverse_ref,gp);
-	    	for(vector<int>::iterator ix=global_contam_3_poses.begin();ix!=global_contam_3_poses.end();ix++){
-	    		//cout<<"3pos:\t"<<*ix<<endl;
-	    		if(*ix>=0){
-	    			return_value.include_global_contam=1;
-	    			if(fq_read.global_contam_3pos!=-1){
-	    				if(*ix<=fq_read.global_contam_3pos){
-			    			fq_read.global_contam_3pos=*ix;
-			    		}
-	    			}else{
-	    				fq_read.global_contam_3pos=*ix;
-	    			}
-	    		}
+	    	if(fq_read.global_contam_5pos!=-1 && fq_read.global_contam_5pos<=fq_read.sequence.size()/2){
+	    		string reverse_ref=reversecomplementary(fq_read.sequence);
+		    	vector<int> global_contam_3_poses=hasGlobalContams(reverse_ref,gp);
+		    	for(vector<int>::iterator ix=global_contam_3_poses.begin();ix!=global_contam_3_poses.end();ix++){
+		    		//cout<<"3pos:\t"<<*ix<<endl;
+		    		if(*ix>=0){
+		    			return_value.include_global_contam=1;
+		    			if(fq_read.global_contam_3pos!=-1){
+		    				if(*ix<=fq_read.global_contam_3pos){
+				    			fq_read.global_contam_3pos=*ix;
+				    		}
+		    			}else{
+		    				fq_read.global_contam_3pos=*ix;
+		    			}
+		    		}
+		    	}
 	    	}
 	    	if(fq_read.global_contam_5pos>=0 && fq_read.global_contam_3pos>=0){
 	    		if(fq_read.global_contam_5pos<fq_read.global_contam_3pos){
@@ -931,27 +933,35 @@ int global_contam_pos(string& ref_sequence,string& global_contam,float min_match
 	int match_score=1;
 	//float min_matchRatio=0.3;
 	//int mismatch_number=1;
+	int total_mismatch_score=mismatch_number*mismatch_score;
 	int rl=ref_sequence.size();
 	int cl=global_contam.size();
 	int min_match_len=int(cl*min_matchRatio);
-	int lower_score=(min_match_len-mismatch_number)-mismatch_number*mismatch_score;
+	int lower_score=(min_match_len-mismatch_number)+total_mismatch_score;
 	int total_score(-1000),overlap(0);
 	//contam sequence is at front of read sequence
 	for(int i=cl-min_match_len;i>=0;i--){
 		int j_max=cl-i>rl?rl:cl-i;
 		for(int j=0;j!=j_max;j++){
 			if(ref_sequence[j]==global_contam[i+j]){
-				if(total_score>mismatch_number*mismatch_score){
+				if(total_score>total_mismatch_score){
 					total_score+=match_score;
 					overlap++;
 				}else{
+					if(j_max-j<min_match_len){
+						break;
+					}
 					total_score=match_score;
 					overlap=1;
 				}
 			}else{
-				if(total_score>mismatch_number*mismatch_score){
+				if(total_score>total_mismatch_score){
 					total_score+=mismatch_score;
 					overlap++;
+				}else{
+					if(j_max-j<min_match_len){
+						break;
+					}
 				}
 			}
 			if(total_score>=lower_score && overlap>=min_match_len){
@@ -965,17 +975,24 @@ int global_contam_pos(string& ref_sequence,string& global_contam,float min_match
 	for(int i=0;i<=rl-cl;i++){
 		for(int j=0;j!=cl;j++){
 			if(ref_sequence[i+j]==global_contam[j]){
-				if(total_score>mismatch_number*mismatch_score){
+				if(total_score>total_mismatch_score){
 					total_score+=match_score;
 					overlap++;
 				}else{
+					if(cl-j<min_match_len){
+						break;
+					}
 					total_score=match_score;
 					overlap=1;
 				}
 			}else{
-				if(total_score>mismatch_number*mismatch_score){
+				if(total_score>total_mismatch_score){
 					total_score+=mismatch_score;
 					overlap++;
+				}else{
+					if(cl-j<min_match_len){
+						break;
+					}
 				}
 			}
 			if(total_score>=lower_score && overlap>=min_match_len){
@@ -990,17 +1007,24 @@ int global_contam_pos(string& ref_sequence,string& global_contam,float min_match
 	for(int i=i_min;i<=cl-min_match_len;i++){
 		for(int j=0;j!=cl-i;j++){
 			if(ref_sequence[rl-(cl-i)+j]==global_contam[j]){
-				if(total_score>mismatch_number*mismatch_score){
+				if(total_score>total_mismatch_score){
 					total_score+=match_score;
 					overlap++;
 				}else{
 					total_score=match_score;
 					overlap=1;
+					if(cl-i-j<min_match_len){
+						break;
+					}
 				}
 			}else{
-				if(total_score>mismatch_number*mismatch_score){
+				if(total_score>total_mismatch_score){
 					total_score+=mismatch_score;
 					overlap++;
+				}else{
+					if(cl-i-j<min_match_len){
+						break;
+					}
 				}
 			}
 			if(total_score>=lower_score && overlap>=min_match_len){
