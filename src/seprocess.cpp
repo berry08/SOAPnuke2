@@ -926,6 +926,7 @@ void* seProcess::sub_thread(int index){
 			}
 		}
 	}
+	check_disk_available();
 	of_log<<get_local_time()<<"\tthread "<<index<<" done\t"<<endl;
 }
 void seProcess::run_pigz(){	//split raw files with pigz and "split" command
@@ -1264,6 +1265,7 @@ void* seProcess::sub_thread_nonssd_realMultiThreads(int index){
 			}
 			
 	}
+	check_disk_available();
 	of_log<<get_local_time()<<"\tthread "<<index<<" done\t"<<endl;
 }
 void seProcess::process_nonssd(){
@@ -1322,6 +1324,7 @@ void seProcess::process_nonssd(){
 		}
 	}
 	//read_monitor.join();
+	check_disk_available();
 	of_log<<get_local_time()<<"\tAnalysis accomplished!"<<endl;
 	of_log.close();
 }
@@ -1337,6 +1340,7 @@ void seProcess::process_nonssd(){
 	}
 }*/
 void seProcess::thread_process_reads(int index,vector<C_fastq> &fq1s){
+	check_disk_available();
 	vector<C_fastq> trim_result1,clean_result1;
 	
 	SEcalOption opt2;
@@ -1418,6 +1422,7 @@ void seProcess::thread_process_reads(int index,vector<C_fastq> &fq1s){
 			se_write_m.unlock();
 		}
 	}
+	check_disk_available();
 	//
 }
 void seProcess::run_extract_random(){
@@ -1683,7 +1688,7 @@ void seProcess::process(){
 			gzclose(gz_fq_se);
 		}
 	}
-
+	check_disk_available();
 	
 	of_log<<get_local_time()<<"\tAnalysis accomplished!"<<endl;
 	of_log.close();
@@ -1970,5 +1975,15 @@ void seProcess::seStreaming_stat(C_global_variable& local_gv){
 			cout<<local_gv.clean1_stat.qs.position_qual[i][j]<<" ";
 		}
 		cout<<"0\n";
+	}
+}
+void seProcess::check_disk_available(){
+	if(access(gp.fq1_path.c_str(),0)==-1){
+		cerr<<"Error:input raw fastq not exists suddenly, please check the disk"<<endl;
+		exit(1);
+	}
+	if(access(gp.output_dir.c_str(),0)==-1){
+		cerr<<"Error:output directory cannot open suddenly, please check the disk"<<endl;
+		exit(1);
 	}
 }
