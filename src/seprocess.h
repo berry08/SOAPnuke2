@@ -37,7 +37,7 @@ public:
 	void brother();
 	void print_stat();
 	void update_stat(C_fastq_file_stat& fq1s_stat,C_filter_stat& fs_stat,string type);
-	void* stat_se_fqs(SEstatOption opt);
+	void* stat_se_fqs(SEstatOption opt,string dataType);
 	//void add_raw_trim(C_fastq_file_stat& a,C_reads_trim_stat& b);
 	void filter_se_fqs(SEcalOption opt);
 	void* sub_thread(int index);

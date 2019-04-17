@@ -456,9 +456,15 @@ void seProcess::update_stat(C_fastq_file_stat& fq1s_stat,C_filter_stat& fs_stat,
 	
 
 }
-void* seProcess::stat_se_fqs(SEstatOption opt){
+void* seProcess::stat_se_fqs(SEstatOption opt,string dataType){
 	opt.stat1->gs.reads_number+=opt.fq1s->size();
 	int normal_bq(0);
+	int qualityBase=0;
+	if(dataType=="clean"){
+		qualityBase=gp.outputQualityPhred;
+	}else{
+		qualityBase=gp.qualityPhred;
+	}
 	for(vector<C_fastq>::iterator ix=opt.fq1s->begin();ix!=opt.fq1s->end();ix++){
 		if((*ix).head_hdcut>0 || (*ix).head_lqcut>0){
 			if((*ix).head_hdcut>=(*ix).head_lqcut){
@@ -501,7 +507,7 @@ void* seProcess::stat_se_fqs(SEstatOption opt){
 			}
 		}
 		for(string::size_type i=0;i!=(*ix).qual_seq.size();i++){	//process quality sequence
-			int base_quality=((*ix).qual_seq)[i]-gp.qualityPhred;
+			int base_quality=((*ix).qual_seq)[i]-qualityBase;
 			/*
 			if(base_quality>MAX_QUAL){
 				cerr<<"Error:quality is too high,please check the quality system parameter or fastq file"<<endl;
@@ -1352,7 +1358,7 @@ void seProcess::thread_process_reads(int index,vector<C_fastq> &fq1s){
 	SEstatOption opt_raw;
 	opt_raw.fq1s=&fq1s;
 	opt_raw.stat1=&se_local_raw_stat1[index];
-	stat_se_fqs(opt_raw);		//statistic raw fastqs
+	stat_se_fqs(opt_raw,"raw");		//statistic raw fastqs
 	fq1s.clear();
 	//add_raw_trim(se_local_raw_stat1[index],raw_cut);
 	
@@ -1360,7 +1366,7 @@ void seProcess::thread_process_reads(int index,vector<C_fastq> &fq1s){
 	if(!gp.trim_fq1.empty()){	//trim means only trim but not discard.
 		opt_trim.fq1s=&trim_result1;
 		opt_trim.stat1=&se_local_trim_stat1[index];
-		stat_se_fqs(opt_trim);	//statistic trim fastqs
+		stat_se_fqs(opt_trim,"trim");	//statistic trim fastqs
 	}
 	/*
 	if(!gp.clean_fq1.empty()){
@@ -1405,7 +1411,7 @@ void seProcess::thread_process_reads(int index,vector<C_fastq> &fq1s){
 			
 		}
 		opt_clean.fq1s=&clean_result1;
-		stat_se_fqs(opt_clean);	//statistic clean fastqs
+		stat_se_fqs(opt_clean,"clean");	//statistic clean fastqs
 		clean_result1.clear();
 		/*thread_write_m[index].lock();
 		thread pewrite_t(bind(&seProcess::peWrite,this,clean_result1,clean_result2,"clean",gz_clean_out1[index],gz_clean_out2[index]));
@@ -1552,7 +1558,7 @@ void seProcess::limit_process_reads(int index,vector<C_fastq> &fq1s,gzFile gzfq1
 	SEstatOption opt_clean;
 	opt_clean.fq1s=&fq1s;
 	opt_clean.stat1=&se_local_clean_stat1[index];
-	stat_se_fqs(opt_clean);		//statistic raw fastqs
+	stat_se_fqs(opt_clean,"raw");		//statistic raw fastqs
 	seWrite(fq1s,"clean",gzfq1);
 	fq1s.clear();
 }

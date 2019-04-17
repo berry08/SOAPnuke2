@@ -788,11 +788,16 @@ void peProcess::update_stat(C_fastq_file_stat& fq1s_stat,C_fastq_file_stat& fq2s
 	
 
 }
-void* peProcess::stat_pe_fqs(PEstatOption opt){	//statistic the pair-ends fastq
+void* peProcess::stat_pe_fqs(PEstatOption opt,string dataType){	//statistic the pair-ends fastq
 	opt.stat1->gs.reads_number+=opt.fq1s->size();
 	opt.stat2->gs.reads_number+=opt.fq2s->size();
 	vector<C_fastq>::iterator ix_end=opt.fq1s->end();
-	
+	int qualityBase=0;
+	if(dataType=="clean"){
+		qualityBase=gp.outputQualityPhred;
+	}else{
+		qualityBase=gp.qualityPhred;
+	}
 	for(vector<C_fastq>::iterator ix=opt.fq1s->begin();ix!=ix_end;ix++){
 		if((*ix).head_hdcut>0 || (*ix).head_lqcut>0){
 			if((*ix).head_hdcut>=(*ix).head_lqcut){
@@ -838,7 +843,7 @@ void* peProcess::stat_pe_fqs(PEstatOption opt){	//statistic the pair-ends fastq
 		}
 		int qual_len=(*ix).qual_seq.size();
 		for(string::size_type i=0;i!=qual_len;i++){	//process quality sequence
-			int base_quality=((*ix).qual_seq)[i]-gp.qualityPhred;
+			int base_quality=((*ix).qual_seq)[i]-qualityBase;
 			/*
 			if(base_quality>MAX_QUAL){
 				//cout<<i<<"\t"<<base_quality<<endl;
@@ -859,6 +864,8 @@ void* peProcess::stat_pe_fqs(PEstatOption opt){	//statistic the pair-ends fastq
 		opt.stat1->gs.read_length=(*ix).sequence.size();
 		opt.stat1->gs.base_number+=opt.stat1->gs.read_length;
 	}
+	//check base quality setting whether ok
+	//run one time
 	int q1_exceed(0),q1_normal_bq(0),q1_mean_bq(0);
 	int q2_exceed(0),q2_normal_bq(0),q2_mean_bq(0);
 	float q1_normal_ratio(0.0),q2_normal_ratio(0.0);
@@ -939,21 +946,10 @@ void* peProcess::stat_pe_fqs(PEstatOption opt){	//statistic the pair-ends fastq
 			}
 		}
 		bq_check++;
-		/*
-		if(normal_ratio>1){
-			cerr<<"Error:code error"<<endl;
-			exit(1);
-		}if(normal_ratio<0.5){
-			cerr<<"Error:base quality seems abnormal,please check the quality system parameter or fastq file"<<endl;
-			exit(1);
-		}else if(normal_ratio<0.9){
-			cerr<<"Warning:base quality seems abnormal,please check the quality system parameter or fastq file"<<endl;
-		}else{
-		}
-		*/
 		pe_cal_m.unlock();
-		//exit(1);
 	}
+
+	//stat read sequence related information
 	vector<C_fastq>::iterator ix2_end=opt.fq2s->end();
 	for(vector<C_fastq>::iterator ix=opt.fq2s->begin();ix!=ix2_end;ix++){
 		if((*ix).head_hdcut>0 || (*ix).head_lqcut>0){
@@ -997,9 +993,10 @@ void* peProcess::stat_pe_fqs(PEstatOption opt){	//statistic the pair-ends fastq
 				}
 			}
 		}
+		//stat base quality related information
 		int qual_len=(*ix).qual_seq.size();
 		for(string::size_type i=0;i!=qual_len;i++){	//process quality sequence
-			int base_quality=((*ix).qual_seq)[i]-gp.qualityPhred;
+			int base_quality=((*ix).qual_seq)[i]-qualityBase;
 			/*
 			if(base_quality>MAX_QUAL){
 				cerr<<"Error:quality is too high,please check the quality system parameter or fastq file"<<endl;
@@ -1362,7 +1359,7 @@ void peProcess::thread_process_reads(int index,vector<C_fastq> &fq1s,vector<C_fa
 	opt_raw.stat1=&local_raw_stat1[index];
 	opt_raw.fq2s=&fq2s;
 	opt_raw.stat2=&local_raw_stat2[index];
-	stat_pe_fqs(opt_raw);		//statistic raw fastqs
+	stat_pe_fqs(opt_raw,"raw");		//statistic raw fastqs
 	//add_raw_trim(local_raw_stat1[index],local_raw_stat2[index],raw_cut.stat1,raw_cut.stat2);
 	fq1s.clear();
 	fq2s.clear();
@@ -1372,7 +1369,7 @@ void peProcess::thread_process_reads(int index,vector<C_fastq> &fq1s,vector<C_fa
 		opt_trim.stat1=&local_trim_stat1[index];
 		opt_trim.fq2s=&trim_result2;
 		opt_trim.stat2=&local_trim_stat2[index];
-		stat_pe_fqs(opt_trim);	//statistic trim fastqs
+		stat_pe_fqs(opt_trim,"trim");	//statistic trim fastqs
 	}
 
 	//write_m.lock();
@@ -1417,7 +1414,7 @@ void peProcess::thread_process_reads(int index,vector<C_fastq> &fq1s,vector<C_fa
 		}
 		opt_clean.fq1s=&clean_result1;
 		opt_clean.fq2s=&clean_result2;
-		stat_pe_fqs(opt_clean);	
+		stat_pe_fqs(opt_clean,"clean");	
 		/*thread_write_m[index].lock();
 		thread pewrite_t(bind(&peProcess::peWrite,this,clean_result1,clean_result2,"clean",gz_clean_out1[index],gz_clean_out2[index]));
 		thread_write_m[index].unlock();*/
@@ -1489,7 +1486,7 @@ void* peProcess::sub_thread_nonssd(int index){	//sub thread process in non-ssd m
 		opt_raw.stat1=&local_raw_stat1[index];
 		opt_raw.fq2s=&fq2s;
 		opt_raw.stat2=&local_raw_stat2[index];
-		stat_pe_fqs(opt_raw);		//statistic raw fastqs
+		stat_pe_fqs(opt_raw,"raw");		//statistic raw fastqs
 		fq1s.clear();
 		fq2s.clear();
 		PEstatOption opt_trim,opt_clean;
@@ -1498,14 +1495,15 @@ void* peProcess::sub_thread_nonssd(int index){	//sub thread process in non-ssd m
 			opt_trim.stat1=&local_trim_stat1[index];
 			opt_trim.fq2s=&trim_result2;
 			opt_trim.stat2=&local_trim_stat2[index];
-			stat_pe_fqs(opt_trim);	//statistic trim fastqs
+			stat_pe_fqs(opt_trim,"trim");	//statistic trim fastqs
 		}
 		if(!gp.clean_fq1.empty()){
 			opt_clean.fq1s=&clean_result1;
 			opt_clean.stat1=&local_clean_stat1[index];
 			opt_clean.fq2s=&clean_result2;
 			opt_clean.stat2=&local_clean_stat2[index];
-			stat_pe_fqs(opt_clean);	//statistic clean fastqs
+			stat_pe_fqs(opt_clean,"raw");	//statistic clean fastqs
+			// when the fastq have output ,then the base quality may change, fastq at here have not be output,so set raw type
 		}
 		write_m.lock();
 		if(!gp.trim_fq1.empty()){
@@ -2366,7 +2364,7 @@ void peProcess::limit_process_reads(int index,vector<C_fastq> &fq1s,vector<C_fas
 	opt_clean.stat1=&local_clean_stat1[index];
 	opt_clean.fq2s=&fq2s;
 	opt_clean.stat2=&local_clean_stat2[index];
-	stat_pe_fqs(opt_clean);		//statistic raw fastqs
+	stat_pe_fqs(opt_clean,"raw");		//statistic raw fastqs
 	peWrite(fq1s,fq2s,"clean",gzfq1,gzfq2);
 	fq1s.clear();
 	fq2s.clear();

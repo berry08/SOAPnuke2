@@ -46,7 +46,7 @@ public:
 	void brother();
 	void print_stat();
 	void update_stat(C_fastq_file_stat& fq1s_stat,C_fastq_file_stat& fq2s_stat,C_filter_stat& fs_stat,string type);
-	void* stat_pe_fqs(PEstatOption opt);
+	void* stat_pe_fqs(PEstatOption opt,string dataType);
 	void filter_pe_fqs(PEcalOption opt);
 	void* sub_thread(int index);
 	int read(vector<C_fastq>& pe1,vector<C_fastq>& pe2,ifstream& infile1,ifstream& infile2);
