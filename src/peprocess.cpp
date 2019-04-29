@@ -1336,6 +1336,9 @@ void peProcess::thread_process_reads(int index,vector<C_fastq> &fq1s,vector<C_fa
 	opt2.clean_result1=&clean_result1;
 	opt2.clean_result2=&clean_result2;
 	if(pair_check==0){
+		if(fq1s.size()==0 || fq2s.size()==0){
+			return;
+		}
 		string readid1=fq1s[0].seq_id;
 		string readid2=fq2s[0].seq_id;
 		if(readid1.size()!=readid2.size()){
@@ -2926,6 +2929,7 @@ void peProcess::peStreaming_stat(C_global_variable& local_gv){
 	}
 }
 void peProcess::check_disk_available(){
+#if !defined(__APPLE__)
 	if(access(gp.fq1_path.c_str(),0)==-1 || access(gp.fq2_path.c_str(),0)==-1){
 		cerr<<"Error:input raw fastq not exists suddenly, please check the disk"<<endl;
 		exit(1);
@@ -2934,4 +2938,5 @@ void peProcess::check_disk_available(){
 		cerr<<"Error:output directory cannot open suddenly, please check the disk"<<endl;
 		exit(1);
 	}
+#endif
 }

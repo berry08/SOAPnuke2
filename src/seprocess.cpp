@@ -1984,6 +1984,7 @@ void seProcess::seStreaming_stat(C_global_variable& local_gv){
 	}
 }
 void seProcess::check_disk_available(){
+#if !defined(__APPLE__)
 	if(access(gp.fq1_path.c_str(),0)==-1){
 		cerr<<"Error:input raw fastq not exists suddenly, please check the disk"<<endl;
 		exit(1);
@@ -1992,4 +1993,5 @@ void seProcess::check_disk_available(){
 		cerr<<"Error:output directory cannot open suddenly, please check the disk"<<endl;
 		exit(1);
 	}
+#endif
 }
