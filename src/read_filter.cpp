@@ -129,7 +129,7 @@ C_fastq_stat_result stat_read(C_fastq& fq_read,C_global_parameter& gp){ //stat s
         if(gp.seq_type=="0"){
             for(i=0;i<seq_id_len;i++){
                 if(fq_read.seq_id[i]=='C')
-                    if(i+8<fq_read.seq_id.size() && fq_read.seq_id[i+4]=='R' && fq_read.seq_id[i+8]=='_')
+                    if(i+8<fq_read.seq_id.size() && fq_read.seq_id[i+4]=='R')
                         break;
             }
         }else{
@@ -258,6 +258,7 @@ C_fastq_stat_result stat_read(C_fastq& fq_read,C_global_parameter& gp){ //stat s
 		}
 		switch((fq_read.sequence)[ix]){
 		//switch((fq_read.sequence)[ix]){
+
 			case 'a':
 			case 'A':return_value.a_num++;break;
 			case 'c':
@@ -269,12 +270,12 @@ C_fastq_stat_result stat_read(C_fastq& fq_read,C_global_parameter& gp){ //stat s
 			case 'n':
 			case 'N':return_value.n_num++;break;
 			default:{
-				cerr<<"Error:unrecognized sequence,"<<(fq_read.sequence)<<endl;
+				cerr<<"Error:unrecognized sequence,"<<fq_read.sequence<<endl;
+				cerr<<(fq_read.sequence)[ix]<<endl;
 				exit(1);
 			}
 		}
 	}
-
 	return_value.contig_base=max_contig;
 	return_value.a_ratio=float(return_value.a_num)/(fq_read.sequence).size();
 	return_value.c_ratio=float(return_value.c_num)/(fq_read.sequence).size();
