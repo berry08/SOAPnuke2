@@ -355,12 +355,12 @@ void fastq_trim(C_fastq& read,C_global_parameter& gp){	//	1.index_remove	2.adapt
             }
 		}
 		int head_cut(0),tail_cut(0);
-		if(ht_flag){	//hard trim
-			read.head_hdcut=atoi(read.head_trim_len.c_str());
-			read.tail_hdcut=atoi(read.tail_trim_len.c_str());
-			head_cut=read.head_hdcut;
-			tail_cut=read.tail_hdcut;
-		}
+//		if(ht_flag){	//hard trim
+//			read.head_hdcut=atoi(read.head_trim_len.c_str());
+//			read.tail_hdcut=atoi(read.tail_trim_len.c_str());
+//			head_cut=read.head_hdcut;
+//			tail_cut=read.tail_hdcut;
+//		}
 		if(lqt_flag){	//low quality end trim
 			vector<string> head_eles,tail_eles;
 			int head_low_qual_threshold,head_low_qual_trim_length_limit,tail_low_qual_threshold,tail_low_qual_trim_length_limit;
@@ -408,6 +408,9 @@ void fastq_trim(C_fastq& read,C_global_parameter& gp){	//	1.index_remove	2.adapt
 			}
 			if(read.adacut_pos>0){
 				tail_cut=tail_cut>=read.adacut_pos?tail_cut:read.adacut_pos;
+				if(ht_flag){
+				    tail_cut+=read.tail_hdcut;
+				}
 			}
 		}
 		if(contam_trim_flag){
