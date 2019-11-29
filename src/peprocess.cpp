@@ -1242,14 +1242,14 @@ void peProcess::create_thread_smallcleanoutputFile(int index,int cycle){
     if(gp.clean_fq1.rfind(".gz")==gp.clean_fq1.size()-3){
         outfile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".clean.r1.fq.gz";
         outfile2<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".clean.r2.fq.gz";
-        gz_clean_out1[index]=gzopen(outfile1.str().c_str(),"ab");
+        gz_clean_out1[index]=gzopen(outfile1.str().c_str(),"wb");
         if(!gz_clean_out1[index]){
             cerr<<"Error:cannot write to the file,"<<outfile1.str()<<endl;
             exit(1);
         }
         gzsetparams(gz_clean_out1[index], 2, Z_DEFAULT_STRATEGY);
         gzbuffer(gz_clean_out1[index],1024*1024*8);
-        gz_clean_out2[index]=gzopen(outfile2.str().c_str(),"ab");
+        gz_clean_out2[index]=gzopen(outfile2.str().c_str(),"wb");
         if(!gz_clean_out2[index]){
             cerr<<"Error:cannot write to the file,"<<outfile2.str()<<endl;
             exit(1);
@@ -1259,11 +1259,11 @@ void peProcess::create_thread_smallcleanoutputFile(int index,int cycle){
     }else{
         outfile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".clean.r1.fq";
         outfile2<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".clean.r2.fq";
-        if((nongz_clean_out1[index]=fopen(outfile1.str().c_str(),"a"))==NULL){
+        if((nongz_clean_out1[index]=fopen(outfile1.str().c_str(),"w"))==NULL){
             cerr<<"Error:cannot write to the file,"<<outfile1.str()<<endl;
             exit(1);
         }
-        if((nongz_clean_out2[index]=fopen(outfile2.str().c_str(),"a"))==NULL){
+        if((nongz_clean_out2[index]=fopen(outfile2.str().c_str(),"w"))==NULL){
             cerr<<"Error:cannot write to the file,"<<outfile2.str()<<endl;
             exit(1);
         }
@@ -1289,11 +1289,36 @@ void peProcess::closeSmallCleanFileHandle(int index){
 }
 void peProcess::thread_process_reads(int index,int cycle,vector<C_fastq> &fq1s,vector<C_fastq> &fq2s){
 	check_disk_available();
-    create_thread_smallcleanoutputFile(index, cycle);
-    if(!gp.trim_fq1.empty()){
-        create_thread_smalltrimoutputFile(index,cycle);
+    ostringstream outfile1;
+    if(gp.clean_fq1.rfind(".gz")==gp.clean_fq1.size()-3){
+        outfile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".clean.r1.fq.gz";
+    }else{
+        outfile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".clean.r1.fq";
     }
-
+    if(access(outfile1.str().c_str(),0)==-1){
+        if(cycle>0){
+            closeSmallCleanFileHandle(index);
+            create_thread_smallcleanoutputFile(index, cycle);
+        }else{
+            create_thread_smallcleanoutputFile(index, cycle);
+        }
+    }
+    outfile1.clear();
+    if(!gp.trim_fq1.empty()){
+        if(gp.trim_fq1.rfind(".gz")==gp.trim_fq1.size()-3){
+            outfile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".trim.r1.fq.gz";
+        }else{
+            outfile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".trim.r1.fq";
+        }
+        if(access(outfile1.str().c_str(),0)==-1){
+            if(cycle>0){
+                closeSmallTrimFileHandle(index);
+            }else{
+                create_thread_smalltrimoutputFile(index, cycle);
+            }
+        }
+    }
+    outfile1.clear();
 	vector<C_fastq>  trim_result1;
 	vector<C_fastq>  trim_result2;
 	vector<C_fastq>  clean_result1;
@@ -1350,7 +1375,7 @@ void peProcess::thread_process_reads(int index,int cycle,vector<C_fastq> &fq1s,v
 		peWrite(trim_result1,trim_result2,gz_trim_out1[index],gz_trim_out2[index]);	//output trim files
 		trim_result1.clear();
 		trim_result2.clear();
-        closeSmallTrimFileHandle(index);
+//        closeSmallTrimFileHandle(index);
 	}
 
 	if(!gp.clean_fq1.empty()){
@@ -1361,7 +1386,7 @@ void peProcess::thread_process_reads(int index,int cycle,vector<C_fastq> &fq1s,v
         }else{
             peWrite(clean_result1,clean_result2,nongz_clean_out1[index],nongz_clean_out2[index]);
         }
-        closeSmallCleanFileHandle(index);
+//        closeSmallCleanFileHandle(index);
 		opt_clean.fq1s=&clean_result1;
 		opt_clean.fq2s=&clean_result2;
 		stat_pe_fqs(opt_clean,"clean");
@@ -1618,6 +1643,10 @@ void* peProcess::sub_thread(int index){
         }
         if(thread_cycle>=0)
             addCleanList(thread_cycle, index);
+	}
+	closeSmallCleanFileHandle(index);
+	if(!gp.trim_fq1.empty()){
+	    closeSmallTrimFileHandle(index);
 	}
 	check_disk_available();
     sub_thread_done[index]=1;
