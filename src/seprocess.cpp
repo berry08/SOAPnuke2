@@ -1121,11 +1121,17 @@ void* seProcess::smallFilesProcess(){
     }else {
         unsigned long long total_merged_reads_number=0;
         while (1) {  //merge small files by input order
-
             bool subThreadAllDone = true;
-            for (int i = 0; i < gp.threads_num; i++) {
-                if (sub_thread_done[i] != 1) {
-                    subThreadAllDone = false;
+            while(1){
+                subThreadAllDone = true;
+                usleep(5000000);
+                for (int i = 0; i < gp.threads_num; i++) {
+                    if (sub_thread_done[i]!=1) {
+                        subThreadAllDone = false;
+                        break;
+                    }
+                }
+                if(subThreadAllDone){
                     break;
                 }
             }
@@ -1136,6 +1142,8 @@ void* seProcess::smallFilesProcess(){
                         ready_cycles = readyCleanFiles1[i].size();
                     }
                 }
+                string readyR1SmallFiles;
+                string readyR1TrimSmallFiles;
                 for (int cycle = cur_cat_cycle; cycle < ready_cycles; cycle++) {
                     vector<int> readyCatFiles;
                     for (int i = 0; i < gp.threads_num; i++) {
@@ -1145,27 +1153,57 @@ void* seProcess::smallFilesProcess(){
                         if(readyCleanFiles1[i].size()==0){
                             break;
                         }
-                        total_merged_reads_number+=clean_file_readsNum[i][cycle];
-                        if(!gp.total_reads_num_random && gp.total_reads_num>0){
-                            if(total_merged_reads_number>gp.total_reads_num){
-                                end_sub_thread=1;
-                                catRmFile(readyCatFiles, cycle, "clean", gp.cleanOutGzFormat);
-                                //output some reads to the final file
-                                int toBeOutputReadsNumber=gp.total_reads_num-(total_merged_reads_number-clean_file_readsNum[i][cycle]);
-                                extractReadsToFile(cycle,i,toBeOutputReadsNumber,"head",gp.cleanOutGzFormat);
-                                rmTmpFiles();
-                                return &se_bq_check;
+                        if (!gp.trim_fq1.empty()) {
+                            if(gp.trimOutGzformat){
+                                readyR1TrimSmallFiles+=" "+gp.output_dir+"/"+tmp_dir+"/thread."+to_string(i)+"."+to_string(cycle)+".trim.r1.fq.gz";
+                            }else{
+                                readyR1TrimSmallFiles+=" "+gp.output_dir+"/"+tmp_dir+"/thread."+to_string(i)+"."+to_string(cycle)+".trim.r1.fq";
                             }
                         }
-                        readyCatFiles.emplace_back(i);
-
+                        if (!gp.clean_fq1.empty()) {
+                            if(gp.cleanOutGzFormat){
+                                readyR1SmallFiles+=" "+gp.output_dir+"/"+tmp_dir+"/thread."+to_string(i)+"."+to_string(cycle)+".clean.r1.fq.gz";
+                            }else{
+                                readyR1SmallFiles+=" "+gp.output_dir+"/"+tmp_dir+"/thread."+to_string(i)+"."+to_string(cycle)+".clean.r1.fq";
+                            }
+                        }
+//                        total_merged_reads_number+=clean_file_readsNum[i][cycle];
+//                        if(!gp.total_reads_num_random && gp.total_reads_num>0){
+//                            if(total_merged_reads_number>gp.total_reads_num){
+//                                end_sub_thread=1;
+//                                catRmFile(readyCatFiles, cycle, "clean", gp.cleanOutGzFormat);
+//                                //output some reads to the final file
+//                                int toBeOutputReadsNumber=gp.total_reads_num-(total_merged_reads_number-clean_file_readsNum[i][cycle]);
+//                                extractReadsToFile(cycle,i,toBeOutputReadsNumber,"head",gp.cleanOutGzFormat);
+//                                rmTmpFiles();
+//                                return &se_bq_check;
+//                            }
+//                        }
+//                        readyCatFiles.emplace_back(i);
+//
                     }
-                    if (!gp.trim_fq1.empty()) {
-                        catRmFile(readyCatFiles, cycle, "trim", gp.trimOutGzformat);
-                    }
-                    if (!gp.clean_fq1.empty()) {
-                        catRmFile(readyCatFiles, cycle, "clean", gp.cleanOutGzFormat);
-                    }
+//                    if (!gp.trim_fq1.empty()) {
+//                        catRmFile(readyCatFiles, cycle, "trim", gp.trimOutGzformat);
+//                    }
+//                    if (!gp.clean_fq1.empty()) {
+//                        catRmFile(readyCatFiles, cycle, "clean", gp.cleanOutGzFormat);
+//                    }
+                }
+                if (!gp.trim_fq1.empty()) {
+                    string mergeShell1="cat "+readyR1TrimSmallFiles+" >"+gp.output_dir+"/"+gp.trim_fq1;
+                    thread t1=thread(bind(&seProcess::run_cmd,this,mergeShell1));
+                    t1.join();
+                    mergeShell1="rm "+readyR1TrimSmallFiles;
+                    t1=thread(bind(&seProcess::run_cmd,this,mergeShell1));
+                    t1.join();
+                }
+                if (!gp.clean_fq1.empty()) {
+                    string mergeShell1="cat "+readyR1SmallFiles+" >"+gp.output_dir+"/"+gp.clean_fq1;
+                    thread t1=thread(bind(&seProcess::run_cmd,this,mergeShell1));
+                    t1.join();
+                    mergeShell1="rm "+readyR1SmallFiles;
+                    t1=thread(bind(&seProcess::run_cmd,this,mergeShell1));
+                    t1.join();
                 }
                 break;
             }
