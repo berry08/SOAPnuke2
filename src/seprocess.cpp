@@ -713,7 +713,7 @@ void seProcess::C_fastq_init(C_fastq& a){
 		a.adapter_seq2=gp.adapter2_seq;
 	}
 	if(!gp.trim.empty()){
-		vector<string> tmp_eles=get_pe_hard_trim(gp.trim);
+		vector<string> tmp_eles=get_se_hard_trim(gp.trim);
 		a.head_trim_len=tmp_eles[0];
 		a.tail_trim_len=tmp_eles[1];
 	}

@@ -1452,7 +1452,6 @@ void* peProcess::sub_thread(int index){
 	int thread_read_block=4*gp.patchSize*patch;
 	vector<C_fastq> fq1s,fq2s;
 	bool inputGzformat=true;
-	bool winLFCR=false;
 	gzFile tmpRead=gzopen((gp.fq1_path).c_str(), "rb");
 	int spaceNum=0;
     if (gzgets(tmpRead, buf1, READBUF) != NULL){
