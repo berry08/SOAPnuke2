@@ -1019,6 +1019,7 @@ void* seProcess::smallFilesProcess(){
     }
     int sleepTime=5;
     if(gp.cleanOutSplit>0){
+        int lastUncompleteFileReadsNumber=0;
         int outputFileIndex=0;
         int cur_avaliable_total_reads_number = 0;
         int sticky_tail_reads_number = 0;
@@ -1050,76 +1051,14 @@ void* seProcess::smallFilesProcess(){
                         if (cycle==ready_cycles-1 && readyCleanFiles1[i].size() < ready_cycles) {
                             break;
                         }
-                        cur_avaliable_total_reads_number += clean_file_readsNum[i][cycle];
-                        if (cur_avaliable_total_reads_number >= gp.cleanOutSplit) {
-                            int toBeOutputReadsNumber = gp.cleanOutSplit - (cur_avaliable_total_reads_number -
-                                                                            clean_file_readsNum[i][cycle]);
-                            extractReadsToFile(cycle, i, toBeOutputReadsNumber, "head",
-                                               outputFileIndex,
-                                               gp.cleanOutGzFormat);
-                            cur_avaliable_total_reads_number -= gp.cleanOutSplit;
-                        } else {
-                            ostringstream catFile1;
-                            if (gp.cleanOutGzFormat) {
-                                catFile1 << "cat " << gp.output_dir << "/" << tmp_dir << "/thread." << i << "."
-                                         << cycle << ".clean.r1.fq.gz >>" << gp.output_dir << "/split."
-                                         << outputFileIndex << "." << gp.clean_fq1<<";rm "<<gp.output_dir << "/" << tmp_dir << "/thread." << i << "."<< cycle << ".clean.r1.fq.gz";
-                            } else {
-                                catFile1 << "cat " << gp.output_dir << "/" << tmp_dir << "/thread." << i << "."
-                                         << cycle << ".clean.r1.fq >>" << gp.output_dir << "/split."
-                                         << outputFileIndex << "." << gp.clean_fq1<<";rm "<<gp.output_dir << "/" << tmp_dir << "/thread." << i << "."<< cycle << ".clean.r1.fq";
-                            }
-                            if (system(catFile1.str().c_str()) == -1) {
-                                cerr << "Error:cat file error" << endl;
-                                exit(1);
-                            }
-                        }
+                        extractReadsToFile(cycle, i, lastUncompleteFileReadsNumber, "head",
+                                           outputFileIndex,
+                                           gp.cleanOutGzFormat);
                     }
                 }
                 break;
             }
-            int stopIndex=0;
 
-            int ready_cycles = readyCleanFiles1[0].size();
-            for (int i = 1; i < gp.threads_num; i++) {
-                if (readyCleanFiles1[i].size() < ready_cycles) {
-                    ready_cycles = readyCleanFiles1[i].size();
-                }
-            }
-
-            for (int cycle = cur_cat_cycle; cycle < ready_cycles; cycle++){
-                for (int i = 0; i < gp.threads_num; i++){
-
-                    if(clean_file_readsNum[i].size()<ready_cycles){
-                        cerr<<"Error:code error"<<endl;
-                        exit(1);
-                    }
-                    cur_avaliable_total_reads_number+=clean_file_readsNum[i][cycle];
-                    if(cur_avaliable_total_reads_number>=gp.cleanOutSplit){
-                        //sticky_tail_reads_number=clean_file_readsNum[i][cycle]-cur_avaliable_total_reads_number;
-                        int toBeOutputReadsNumber=gp.cleanOutSplit-(cur_avaliable_total_reads_number-clean_file_readsNum[i][cycle]);
-                        extractReadsToFile(cycle,i,toBeOutputReadsNumber,"head",outputFileIndex,gp.cleanOutGzFormat);
-                        cur_avaliable_total_reads_number-=gp.cleanOutSplit;
-                    }else{
-                        ostringstream catFile1;
-                        if(gp.cleanOutGzFormat){
-                            catFile1 << "cat " << gp.output_dir << "/" << tmp_dir << "/thread." << i << "."
-                                     << cycle << ".clean.r1.fq.gz >>" << gp.output_dir << "/split."
-                                     << outputFileIndex << "." << gp.clean_fq1<<";rm "<<gp.output_dir << "/" << tmp_dir << "/thread." << i << "."<< cycle << ".clean.r1.fq.gz";
-                        } else {
-                            catFile1 << "cat " << gp.output_dir << "/" << tmp_dir << "/thread." << i << "."
-                                     << cycle << ".clean.r1.fq >>" << gp.output_dir << "/split."
-                                     << outputFileIndex << "." << gp.clean_fq1<<";rm "<<gp.output_dir << "/" << tmp_dir << "/thread." << i << "."<< cycle << ".clean.r1.fq";
-                        }
-                        if(system(catFile1.str().c_str())==-1) {
-                            cerr << "Error:cat file error" << endl;
-                            exit(1);
-                        }
-                    }
-                }
-            }
-            if(ready_cycles>0)
-                cur_cat_cycle=ready_cycles;
             sleep(sleepTime);
         }
     }else {
@@ -1353,30 +1292,53 @@ void seProcess::rmTmpFiles(){
     string cmd="rm -f "+gp.output_dir+"/"+tmp_dir+"/*fq*";
     run_cmd(cmd);
 }
-void seProcess::extractReadsToFile(int cycle,int thread_index,int reads_number,string position,int& output_index,bool gzFormat){
+void seProcess::extractReadsToFile(int cycle,int thread_index,int& reads_number,string position,int& output_index,bool gzFormat){
     ostringstream outFile1;
     outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
     ostringstream cleanSmallFile1;
-
+    bool exists=0;
+    if(access(outFile1.str().c_str(),0)!=-1){
+        exists=1;
+    }
     if(gzFormat){
         cleanSmallFile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r1.fq.gz";
         gzFile gzCleanSmall1;
         gzCleanSmall1=gzopen(cleanSmallFile1.str().c_str(),"rb");
 
         gzFile splitGzFq1;
-        splitGzFq1=gzopen(outFile1.str().c_str(),"ab");
-        gzsetparams(splitGzFq1, 2, Z_DEFAULT_STRATEGY);
-        gzbuffer(splitGzFq1,1024*1024*10);
+        ostringstream tmpOut1;
+        if(!exists) {
+            splitGzFq1=gzopen(outFile1.str().c_str(),"wb");
+            gzsetparams(splitGzFq1, 2, Z_DEFAULT_STRATEGY);
+            gzbuffer(splitGzFq1,1024*1024*10);
+        }else{
+            tmpOut1<<gp.output_dir<<"/split.tmpR1."<<gp.clean_fq1;
+            splitGzFq1 = gzopen(tmpOut1.str().c_str(), "wb");
+        }
         char buf1[READBUF];
-
         if(position=="head"){
-            for(int i=0;i<reads_number*4;i++){
+            int addedLines=0;
+            for(int i=0;i<(gp.cleanOutSplit-reads_number)*4;i++){
                 if(gzgets(gzCleanSmall1,buf1,READBUF)!=NULL){
+                    addedLines++;
                     string line(buf1);
                     gzwrite(splitGzFq1,line.c_str(),line.size());
                 }
             }
+
             gzclose(splitGzFq1);
+            if(exists){
+                string backup=outFile1.str()+".backup";
+                string runSh="mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
+                run_cmd(runSh);
+            }
+            reads_number+=addedLines/4;
+            reads_number=reads_number%gp.cleanOutSplit;
+            if(reads_number!=0){
+                string sh="rm "+cleanSmallFile1.str();
+                run_cmd(sh);
+                return;
+            }
             outFile1.str("");
             output_index++;
             outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
@@ -1386,9 +1348,11 @@ void seProcess::extractReadsToFile(int cycle,int thread_index,int reads_number,s
             int readsNum=0;
             while(gzgets(gzCleanSmall1,buf1,READBUF)!=NULL){
                 readsNum++;
+                reads_number++;
                 string line(buf1);
                 gzwrite(splitGzFq1,line.c_str(),line.size());
                 if(readsNum==gp.cleanOutSplit*4){
+                    reads_number=0;
                     gzclose(splitGzFq1);
                     output_index++;
                     outFile1.str("");
@@ -1399,6 +1363,7 @@ void seProcess::extractReadsToFile(int cycle,int thread_index,int reads_number,s
                     readsNum=0;
                 }
             }
+            reads_number/=4;
             gzclose(splitGzFq1);
             gzclose(gzCleanSmall1);
         }
@@ -1507,7 +1472,7 @@ void seProcess::thread_process_reads(int index,int& cycle,vector<C_fastq> &fq1s)
             create_thread_smallcleanoutputFile(index, cycle);
         }
     }
-    outfile1.clear();
+    outfile1.str("");
     if(!gp.trim_fq1.empty()){
         if(gp.trim_fq1.rfind(".gz")==gp.trim_fq1.size()-3){
             outfile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<index<<"."<<cycle<<".trim.r1.fq.gz";
@@ -1517,12 +1482,13 @@ void seProcess::thread_process_reads(int index,int& cycle,vector<C_fastq> &fq1s)
         if(access(outfile1.str().c_str(),0)==-1){
             if(cycle>0){
                 closeSmallTrimFileHandle(index);
+                create_thread_smalltrimoutputFile(index, cycle);
             }else{
                 create_thread_smalltrimoutputFile(index, cycle);
             }
         }
     }
-    outfile1.clear();
+    outfile1.str("");
     vector<C_fastq> trim_result1,clean_result1;
 
     SEcalOption opt2;
@@ -1553,7 +1519,11 @@ void seProcess::thread_process_reads(int index,int& cycle,vector<C_fastq> &fq1s)
     */
     //
     if(!gp.trim_fq1.empty()){
-        seWrite(trim_result1,gz_trim_out1[index]);	//output trim files
+        if(gp.trimOutGzformat) {
+            seWrite(trim_result1, gz_trim_out1[index]);    //output trim files
+        }else{
+            seWrite(trim_result1, nongz_trim_out1[index]);
+        }
         trim_result1.clear();
 //        closeSmallTrimFileHandle(index);
     }

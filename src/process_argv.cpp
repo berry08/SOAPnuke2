@@ -407,7 +407,7 @@ bool check_parameter(int argc,char* argv[],C_global_parameter& gp){
             }
             if(gp.cleanOutSplit>0 || gp.total_reads_num>0){
                 if(gp.clean_fq1.rfind(".gz")!=gp.clean_fq1.size()-3 && gp.clean_fq2.rfind(".gz")!=gp.clean_fq2.size()-3){
-                    cerr<<"Error:the clean out fastq should be non-gz format when clean output reads are limited"<<endl;
+                    cerr<<"Error:the clean out fastq should be gz format when clean output reads are limited"<<endl;
                     exit(1);
                 }
             }
