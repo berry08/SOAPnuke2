@@ -1,0 +1,7 @@
+enable_testing()
+cmake_minimum_required(VERSION 3.3)
+project(SOAPnuke)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(MAIN_SOURCE_FILES src/main.cpp src/gc.cpp src/global_variable.cpp src/process_argv.cpp src/read_filter.cpp src/seprocess.cpp src/sequence.cpp src/peprocess.cpp)
+add_executable(SOAPnuke ${MAIN_SOURCE_FILES})
+target_link_libraries(SOAPnuke z pthread)

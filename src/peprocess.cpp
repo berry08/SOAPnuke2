@@ -1787,7 +1787,7 @@ void peProcess::catRmFile(vector<int> indexes,int cycle,string type,bool gzForma
 //        }
     }
 }
-void peProcess::extractReadsToFile(int cycle,int thread_index,int& reads_number,string position,int& output_index,bool gzFormat){
+void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,int& reads_number,string position,int& output_index,bool gzFormat){
     ostringstream outFile1,outFile2;
     outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
     outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
@@ -1799,11 +1799,33 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int& reads_number,
     if(gzFormat){
         cleanSmallFile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r1.fq.gz";
         cleanSmallFile2<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r2.fq.gz";
+        ostringstream tmpOut1,tmpOut2;
+        if(fileReadsNum<=gp.cleanOutSplit-reads_number){
+            if(!exists){
+                string sh1="mv "+cleanSmallFile1.str()+" "+outFile1.str();
+                string sh2="mv "+cleanSmallFile2.str()+" "+outFile2.str();
+                run_cmd(sh1);
+                run_cmd(sh2);
+                reads_number+=fileReadsNum;
+                return;
+            }else{
+                string backup=outFile1.str()+".backup";
+                string backup2=outFile2.str()+".backup";
+                tmpOut1<<gp.output_dir<<"/split.tmpR1."<<gp.clean_fq1;
+                tmpOut2<<gp.output_dir<<"/split.tmpR2."<<gp.clean_fq2;
+                string sh1="mv "+cleanSmallFile1.str()+" "+tmpOut1.str()+";mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
+                string sh2="mv "+cleanSmallFile2.str()+" "+tmpOut2.str()+";mv "+outFile2.str()+" "+backup+";cat "+backup+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup+" "+tmpOut2.str();
+                run_cmd(sh1);
+                run_cmd(sh2);
+                reads_number+=fileReadsNum;
+                return;
+            }
+        }
         gzFile gzCleanSmall1,gzCleanSmall2;
         gzCleanSmall1=gzopen(cleanSmallFile1.str().c_str(),"rb");
         gzCleanSmall2=gzopen(cleanSmallFile2.str().c_str(),"rb");
         gzFile splitGzFq1, splitGzFq2;
-        ostringstream tmpOut1,tmpOut2;
+
         if(!exists) {
             splitGzFq1 = gzopen(outFile1.str().c_str(), "wb");
             gzsetparams(splitGzFq1, 2, Z_DEFAULT_STRATEGY);
@@ -1819,181 +1841,184 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int& reads_number,
             splitGzFq2 = gzopen(tmpOut2.str().c_str(), "wb");
         }
         char buf1[READBUF],buf2[READBUF];
-
-        if(position=="head"){
-            int addedLines=0;
-            for(int i=0;i<(gp.cleanOutSplit-reads_number)*4;i++){
-                if(gzgets(gzCleanSmall1,buf1,READBUF)!=NULL){
-                    addedLines++;
-                    string line(buf1);
-                    gzwrite(splitGzFq1,line.c_str(),line.size());
-                }
-                if(gzgets(gzCleanSmall2,buf2,READBUF)!=NULL){
-                    string line(buf2);
-                    gzwrite(splitGzFq2,line.c_str(),line.size());
-                }
-            }
-            gzflush(splitGzFq1,1);
-            gzflush(splitGzFq2,1);
-
-            gzclose(splitGzFq1);
-            gzclose(splitGzFq2);
-            if(exists){
-                string backup=outFile1.str()+".backup";
-                string backup2=outFile2.str()+".backup";
-                string runSh="mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
-                string runSh2="mv "+outFile2.str()+" "+backup2+";cat "+backup2+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup2+" "+tmpOut2.str();
-                run_cmd(runSh);
-                run_cmd(runSh2);
-            }
-            reads_number+=addedLines/4;
-            reads_number=reads_number%gp.cleanOutSplit;
-            if(reads_number!=0){
-                string sh="rm "+cleanSmallFile1.str()+" "+cleanSmallFile2.str();
-                run_cmd(sh);
-                return;
-            }
-            outFile1.str("");
-            outFile2.str("");
-            output_index++;
-            outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
-            outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
-            splitGzFq1=gzopen(outFile1.str().c_str(),"wb");
-            gzsetparams(splitGzFq1, 2, Z_DEFAULT_STRATEGY);
-            gzbuffer(splitGzFq1,1024*1024*10);
-            splitGzFq2=gzopen(outFile2.str().c_str(),"wb");
-            gzsetparams(splitGzFq2, 2, Z_DEFAULT_STRATEGY);
-            gzbuffer(splitGzFq2,1024*1024*10);
-            int tmp_index=output_index;
-            int readsNum=0;
-            while(gzgets(gzCleanSmall1,buf1,READBUF)!=NULL){
-                string line(buf1);
+        int tmp_index=output_index;
+        int lineNum=0;
+        int readsNum=0;
+        int tmpReadsNumber=reads_number;
+        while(gzgets(gzCleanSmall1,buf1,READBUF)!=NULL){
+            string line(buf1);
+            lineNum++;
+            gzwrite(splitGzFq1,line.c_str(),line.size());
+            if(lineNum%4==0){
                 readsNum++;
                 reads_number++;
-                gzwrite(splitGzFq1,line.c_str(),line.size());
-                if(readsNum==gp.cleanOutSplit*4){
-                    reads_number=0;
-                    gzclose(splitGzFq1);
+                if(reads_number==gp.cleanOutSplit){
+                    reads_number = 0;
+                    if(exists){
+                        string backup=outFile1.str()+".backup";
+                        outFile1.str("");
+                        outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
+                        string runSh="mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
+                        run_cmd(runSh);
+                    }else {
+                        gzclose(splitGzFq1);
+                    }
                     output_index++;
                     outFile1.str("");
-                    outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
-                    splitGzFq1=gzopen(outFile1.str().c_str(),"wb");
+                    outFile1 << gp.output_dir << "/split." << output_index << "." << gp.clean_fq1;
+                    splitGzFq1 = gzopen(outFile1.str().c_str(), "wb");
                     gzsetparams(splitGzFq1, 2, Z_DEFAULT_STRATEGY);
-                    gzbuffer(splitGzFq1,1024*1024*10);
-                    readsNum=0;
+                    gzbuffer(splitGzFq1, 1024 * 1024 * 10);
+                    readsNum++;
                 }
             }
-            readsNum=0;
-            output_index=tmp_index;
-            while(gzgets(gzCleanSmall2,buf2,READBUF)!=NULL){
+
+        }
+        lineNum=0;
+        readsNum=0;
+        output_index=tmp_index;
+        reads_number=tmpReadsNumber;
+        while(gzgets(gzCleanSmall2,buf2,READBUF)!=NULL){
+            string line(buf2);
+            lineNum++;
+            gzwrite(splitGzFq2,line.c_str(),line.size());
+            if(lineNum%4==0){
                 readsNum++;
-                string line(buf2);
-                gzwrite(splitGzFq2,line.c_str(),line.size());
-                if(readsNum==gp.cleanOutSplit*4){
-                    gzclose(splitGzFq2);
+                reads_number++;
+                if(reads_number==gp.cleanOutSplit){
+                    reads_number=0;
+                    if(exists){
+                        string backup2=outFile2.str()+".backup";
+                        outFile2.str("");
+                        outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
+                        string runSh2="mv "+outFile2.str()+" "+backup2+";cat "+backup2+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup2+" "+tmpOut2.str();
+                        run_cmd(runSh2);
+                    }else {
+                        gzclose(splitGzFq2);
+                    }
                     output_index++;
                     outFile2.str("");
-                    outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
-                    splitGzFq2=gzopen(outFile2.str().c_str(),"wb");
+                    outFile2 << gp.output_dir << "/split." << output_index << "." << gp.clean_fq2;
+                    splitGzFq2 = gzopen(outFile2.str().c_str(), "wb");
                     gzsetparams(splitGzFq2, 2, Z_DEFAULT_STRATEGY);
-                    gzbuffer(splitGzFq2,1024*1024*10);
-                    readsNum=0;
+                    gzbuffer(splitGzFq2, 1024 * 1024 * 10);
+                    readsNum++;
                 }
             }
-            reads_number/=4;
-            gzclose(splitGzFq1);
-            gzclose(splitGzFq2);
-            gzclose(gzCleanSmall1);
-            gzclose(gzCleanSmall2);
         }
+
+
+        gzclose(splitGzFq1);
+        gzclose(splitGzFq2);
+        gzclose(gzCleanSmall1);
+        gzclose(gzCleanSmall2);
     }else{
         cleanSmallFile1<<gp.output_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r1.fq";
         cleanSmallFile1<<gp.output_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r2.fq";
+        ostringstream tmpOut1,tmpOut2;
+        if(fileReadsNum<=gp.cleanOutSplit-reads_number){
+            if(!exists){
+                string sh1="mv "+cleanSmallFile1.str()+" "+outFile1.str();
+                string sh2="mv "+cleanSmallFile2.str()+" "+outFile2.str();
+                run_cmd(sh1);
+                run_cmd(sh2);
+                return;
+            }else{
+                string backup=outFile1.str()+".backup";
+                string backup2=outFile2.str()+".backup";
+                tmpOut1<<gp.output_dir<<"/split.tmpR1."<<gp.clean_fq1;
+                tmpOut2<<gp.output_dir<<"/split.tmpR2."<<gp.clean_fq2;
+                string sh1="mv "+cleanSmallFile1.str()+" "+tmpOut1.str()+";mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
+                string sh2="mv "+cleanSmallFile2.str()+" "+tmpOut2.str()+";mv "+outFile2.str()+" "+backup+";cat "+backup+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup+" "+tmpOut2.str();
+                run_cmd(sh1);
+                run_cmd(sh2);
+                return;
+            }
+        }
         FILE* nongzCleanSmall1,*nongzCleanSmall2;
         nongzCleanSmall1=fopen(cleanSmallFile1.str().c_str(),"r");
         nongzCleanSmall2=fopen(cleanSmallFile2.str().c_str(),"r");
-
         FILE* splitNonGzFq1,*splitNonGzFq2;
-        splitNonGzFq1=fopen(outFile1.str().c_str(),"w");
-        splitNonGzFq2=fopen(outFile2.str().c_str(),"w");
-        char buf1[READBUF],buf2[READBUF];
-
-        if(position=="head"){
-            int addedLines=0;
-            for(int i=0;i<reads_number*4;i++){
-                if(fgets(buf1,READBUF,nongzCleanSmall1)!=NULL){
-                    addedLines++;
-                    string line(buf1);
-                    fputs(line.c_str(),splitNonGzFq1);
-                }
-                if(fgets(buf2,READBUF,nongzCleanSmall2)!=NULL){
-                    string line(buf2);
-                    fputs(line.c_str(),splitNonGzFq2);
-                }
-            }
-            fclose(splitNonGzFq1);
-            fclose(splitNonGzFq2);
-            ostringstream tmpOut1,tmpOut2;
-            if(exists){
-                string backup=outFile1.str()+".backup";
-                string backup2=outFile2.str()+".backup";
-                string runSh="mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
-                string runSh2="mv "+outFile2.str()+" "+backup2+";cat "+backup2+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup2+" "+tmpOut2.str();
-                run_cmd(runSh);
-                run_cmd(runSh2);
-            }
-            reads_number+=addedLines/4;
-            reads_number=reads_number%gp.cleanOutSplit;
-            if(reads_number!=0){
-                string sh="rm "+cleanSmallFile1.str()+" "+cleanSmallFile1.str();
-                run_cmd(sh);
-                return;
-            }
-            outFile1.str("");
-            outFile2.str("");
-            output_index++;
-            outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
-            outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
+        if(!exists) {
             splitNonGzFq1=fopen(outFile1.str().c_str(),"w");
             splitNonGzFq2=fopen(outFile2.str().c_str(),"w");
-            int tmp_index=output_index;
-            int readsNum=0;
-            while(fgets(buf1,READBUF,nongzCleanSmall1)!=NULL){
+        }else{
+            tmpOut1<<gp.output_dir<<"/split.tmpR1."<<gp.clean_fq1;
+            tmpOut2<<gp.output_dir<<"/split.tmpR2."<<gp.clean_fq2;
+            splitNonGzFq1=fopen(tmpOut1.str().c_str(),"w");
+            splitNonGzFq2=fopen(tmpOut2.str().c_str(),"w");
+        }
+
+
+//        splitNonGzFq1=fopen(outFile1.str().c_str(),"w");
+//        splitNonGzFq2=fopen(outFile2.str().c_str(),"w");
+        char buf1[READBUF],buf2[READBUF];
+        int tmp_index=output_index;
+        int lineNum=0;
+        int readsNum=0;
+        int tmpReadsNumber=reads_number;
+        while(fgets(buf1,READBUF,nongzCleanSmall1)!=NULL){
+            lineNum++;
+            reads_number++;
+            string line(buf1);
+            fputs(line.c_str(),splitNonGzFq1);
+            if(lineNum%4==0) {
                 readsNum++;
                 reads_number++;
-                string line(buf1);
-                fputs(line.c_str(),splitNonGzFq1);
-                if(readsNum==gp.cleanOutSplit*4){
-                    reads_number=0;
-                    fclose(splitNonGzFq1);
+                if (readsNum == gp.cleanOutSplit) {
+                    reads_number = 0;
+                    if(exists){
+                        string backup=outFile1.str()+".backup";
+                        outFile1.str("");
+                        outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
+                        string runSh="mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
+                        run_cmd(runSh);
+                    }else {
+                        fclose(splitNonGzFq1);
+                    }
                     output_index++;
                     outFile1.str("");
-                    outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
-                    splitNonGzFq1=fopen(outFile1.str().c_str(),"w");
-                    readsNum=0;
+                    outFile1 << gp.output_dir << "/split." << output_index << "." << gp.clean_fq1;
+                    splitNonGzFq1 = fopen(outFile1.str().c_str(), "w");
+                    readsNum++;
                 }
             }
-            readsNum=0;
-            output_index=tmp_index;
-            while(fgets(buf2,READBUF,nongzCleanSmall2)!=NULL){
+        }
+        lineNum=0;
+        readsNum=0;
+        output_index=tmp_index;
+        reads_number=tmpReadsNumber;
+        while(fgets(buf1,READBUF,nongzCleanSmall1)!=NULL){
+            lineNum++;
+            reads_number++;
+            string line(buf1);
+            fputs(line.c_str(),splitNonGzFq1);
+            if(lineNum%4==0) {
                 readsNum++;
-                string line(buf2);
-                fputs(line.c_str(),splitNonGzFq2);
-                if(readsNum==gp.cleanOutSplit*4){
-                    fclose(splitNonGzFq2);
+                reads_number++;
+                if (readsNum == gp.cleanOutSplit) {
+                    reads_number = 0;
+                    if(exists){
+                        string backup=outFile2.str()+".backup";
+                        outFile2.str("");
+                        outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
+                        string runSh="mv "+outFile2.str()+" "+backup+";cat "+backup+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup+" "+tmpOut2.str();
+                        run_cmd(runSh);
+                    }else {
+                        fclose(splitNonGzFq2);
+                    }
                     output_index++;
                     outFile2.str("");
-                    outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
-                    splitNonGzFq2=fopen(outFile2.str().c_str(),"w");
-                    readsNum=0;
+                    outFile2 << gp.output_dir << "/split." << output_index << "." << gp.clean_fq2;
+                    splitNonGzFq2 = fopen(outFile2.str().c_str(), "w");
+                    readsNum++;
                 }
             }
-            reads_number/=4;
-            fclose(splitNonGzFq1);
-            fclose(splitNonGzFq2);
-            fclose(nongzCleanSmall1);
-            fclose(nongzCleanSmall2);
         }
+        fclose(splitNonGzFq1);
+        fclose(splitNonGzFq2);
+        fclose(nongzCleanSmall1);
+        fclose(nongzCleanSmall2);
     }
     string rmCmd1="rm "+cleanSmallFile1.str();
     string rmCmd2="rm "+cleanSmallFile2.str();
@@ -2148,7 +2173,9 @@ void* peProcess::smallFilesProcess(){
                                 readyR2TrimSmallFiles+=" "+gp.output_dir+"/"+tmp_dir+"/thread."+to_string(i)+"."+to_string(cycle)+".trim.r2.fq";
                             }
                         }
-                        extractReadsToFile(cycle, i, lastUncompleteFileReadsNumber, "head",
+                        int fileReadsNum=clean_file_readsNum[i][cycle];
+
+                        extractReadsToFile(cycle, i, fileReadsNum,lastUncompleteFileReadsNumber, "head",
                                                outputFileIndex,
                                                gp.cleanOutGzFormat);
                     }

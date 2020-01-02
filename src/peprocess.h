@@ -73,7 +73,7 @@ public:
     void* sub_extract(string in,int mo,string out);
     void rmTmpFiles();
 	void check_disk_available();
-	void extractReadsToFile(int cycle,int thread_index,int& reads_number,string position,int& output_index,bool gzFormat);
+	void extractReadsToFile(int cycle,int thread_index,int fileReadsNum,int& reads_number,string position,int& output_index,bool gzFormat);
     void extractReadsToFile(int cycle,int thread_index,int reads_number,string position,bool gzFormat);
     void reArrangeReads(int cycle,bool gzFormat,bool split,int& splitIndex,int& preNum);
     void addCleanList(int tmp_cycle,int index);

@@ -1,0 +1,4 @@
+/Users/berry/Documents/bgi/projects/SOAPnuke/berry08/SOAPnuke2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/berry/Documents/bgi/projects/SOAPnuke/berry08/SOAPnuke2/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/berry/Documents/bgi/projects/SOAPnuke/berry08/SOAPnuke2/cmake-build-debug/CMakeFiles/test.dir
+/Users/berry/Documents/bgi/projects/SOAPnuke/berry08/SOAPnuke2/cmake-build-debug/CMakeFiles/SOAPnuke.dir
