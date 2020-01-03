@@ -1347,14 +1347,13 @@ void seProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,i
                 reads_number++;
                 if(reads_number==gp.cleanOutSplit){
                     reads_number = 0;
+                    gzclose(splitGzFq1);
                     if(exists){
                         string backup=outFile1.str()+".backup";
                         outFile1.str("");
                         outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
                         string runSh="mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
                         run_cmd(runSh);
-                    }else {
-                        gzclose(splitGzFq1);
                     }
                     output_index++;
                     outFile1.str("");

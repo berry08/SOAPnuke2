@@ -1854,14 +1854,13 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,i
                 reads_number++;
                 if(reads_number==gp.cleanOutSplit){
                     reads_number = 0;
+                    gzclose(splitGzFq1);
                     if(exists){
                         string backup=outFile1.str()+".backup";
                         outFile1.str("");
                         outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
                         string runSh="mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
                         run_cmd(runSh);
-                    }else {
-                        gzclose(splitGzFq1);
                     }
                     output_index++;
                     outFile1.str("");
@@ -1887,14 +1886,13 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,i
                 reads_number++;
                 if(reads_number==gp.cleanOutSplit){
                     reads_number=0;
+                    gzclose(splitGzFq2);
                     if(exists){
                         string backup2=outFile2.str()+".backup";
                         outFile2.str("");
                         outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
                         string runSh2="mv "+outFile2.str()+" "+backup2+";cat "+backup2+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup2+" "+tmpOut2.str();
                         run_cmd(runSh2);
-                    }else {
-                        gzclose(splitGzFq2);
                     }
                     output_index++;
                     outFile2.str("");
