@@ -61,7 +61,7 @@ public:
     void run_cmd(string cmd);
     void* sub_extract(string in,int mo,string out);
     void rmTmpFiles();
-    void extractReadsToFile(int cycle,int thread_index,int fileReadsNum,int& reads_number,string position,int& output_index,bool gzFormat);
+    void extractReadsToFile(int cycle,int thread_index,vector<string> r1,int fileReadsNum,int& reads_number,string position,int& output_index,bool gzFormat,bool done);
     void extractReadsToFile(int cycle,int thread_index,int reads_number,string position,bool gzFormat);
     void addCleanList(int tmp_cycle,int index);
 	//void peOutput(outputOption opt);

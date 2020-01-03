@@ -1787,7 +1787,7 @@ void peProcess::catRmFile(vector<int> indexes,int cycle,string type,bool gzForma
 //        }
     }
 }
-void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,int& reads_number,string position,int& output_index,bool gzFormat){
+void peProcess::extractReadsToFile(int cycle,int thread_index,vector<string> r1,vector<string> r2,int fileReadsNum,int& reads_number,string position,int& output_index,bool gzFormat,bool done){
     ostringstream outFile1,outFile2;
     outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
     outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
@@ -1796,51 +1796,74 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,i
     if(access(outFile1.str().c_str(),0)!=-1){
         exists=1;
     }
+    if(exists){
+        string sh1="mv "+outFile1.str()+" "+outFile1.str()+".prefix";
+        string sh2="mv "+outFile2.str()+" "+outFile2.str()+".prefix";
+        run_cmd(sh1);
+        run_cmd(sh2);
+    }
     if(gzFormat){
         cleanSmallFile1<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r1.fq.gz";
         cleanSmallFile2<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r2.fq.gz";
         ostringstream tmpOut1,tmpOut2;
-        if(fileReadsNum<=gp.cleanOutSplit-reads_number){
-            if(!exists){
-                string sh1="mv "+cleanSmallFile1.str()+" "+outFile1.str();
-                string sh2="mv "+cleanSmallFile2.str()+" "+outFile2.str();
-                run_cmd(sh1);
-                run_cmd(sh2);
-                reads_number+=fileReadsNum;
-                return;
-            }else{
-                string backup=outFile1.str()+".backup";
-                string backup2=outFile2.str()+".backup";
-                tmpOut1<<gp.output_dir<<"/split.tmpR1."<<gp.clean_fq1;
-                tmpOut2<<gp.output_dir<<"/split.tmpR2."<<gp.clean_fq2;
-                string sh1="mv "+cleanSmallFile1.str()+" "+tmpOut1.str()+";mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
-                string sh2="mv "+cleanSmallFile2.str()+" "+tmpOut2.str()+";mv "+outFile2.str()+" "+backup+";cat "+backup+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup+" "+tmpOut2.str();
-                run_cmd(sh1);
-                run_cmd(sh2);
-                reads_number+=fileReadsNum;
-                return;
-            }
-        }
         gzFile gzCleanSmall1,gzCleanSmall2;
         gzCleanSmall1=gzopen(cleanSmallFile1.str().c_str(),"rb");
         gzCleanSmall2=gzopen(cleanSmallFile2.str().c_str(),"rb");
         gzFile splitGzFq1, splitGzFq2;
-
-        if(!exists) {
-            splitGzFq1 = gzopen(outFile1.str().c_str(), "wb");
-            gzsetparams(splitGzFq1, 2, Z_DEFAULT_STRATEGY);
-            gzbuffer(splitGzFq1, 1024 * 1024 * 10);
-            splitGzFq2 = gzopen(outFile2.str().c_str(), "wb");
-            gzsetparams(splitGzFq2, 2, Z_DEFAULT_STRATEGY);
-            gzbuffer(splitGzFq2, 1024 * 1024 * 10);
-        }else{
-
-            tmpOut1<<gp.output_dir<<"/split.tmpR1."<<gp.clean_fq1;
-            tmpOut2<<gp.output_dir<<"/split.tmpR2."<<gp.clean_fq2;
+        tmpOut1<<gp.output_dir<<"/split.tmpR1."<<gp.clean_fq1;
+        tmpOut2<<gp.output_dir<<"/split.tmpR2."<<gp.clean_fq2;
+        char buf1[READBUF], buf2[READBUF];
+        if(!done) {
             splitGzFq1 = gzopen(tmpOut1.str().c_str(), "wb");
             splitGzFq2 = gzopen(tmpOut2.str().c_str(), "wb");
+            for (int i = 1; i <= (gp.cleanOutSplit - reads_number) * 4; i++) {
+                if (gzgets(gzCleanSmall1, buf1, READBUF) != NULL) {
+                    string line(buf1);
+                    gzwrite(splitGzFq1, line.c_str(), line.size());
+                }
+                if (gzgets(gzCleanSmall2, buf2, READBUF) != NULL) {
+                    string line(buf2);
+                    gzwrite(splitGzFq2, line.c_str(), line.size());
+                }
+            }
+            gzclose(splitGzFq1);
+            gzclose(splitGzFq2);
+            r1.push_back(tmpOut1.str());
+            r2.push_back(tmpOut2.str());
         }
-        char buf1[READBUF],buf2[READBUF];
+        string sh1="cat ";
+        string rmSh1="rm ";
+        sh1+=exists?outFile1.str()+".prefix"+" ":"";
+        rmSh1+=exists?outFile1.str()+".prefix"+" ":"";
+        for(vector<string>::iterator ix=r1.begin();ix!=r1.end();ix++){
+            sh1+=*ix+" ";
+            rmSh1+=*ix+" ";
+        }
+        sh1+="> "+outFile1.str();
+        string sh2="cat ";
+        string rmSh2="rm ";
+        sh2+=exists?outFile2.str()+".prefix"+" ":"";
+        rmSh2+=exists?outFile2.str()+".prefix"+" ":"";
+        for(vector<string>::iterator ix=r2.begin();ix!=r2.end();ix++){
+            sh2+=*ix+" ";
+            rmSh2+=*ix+" ";
+        }
+        sh2+="> "+outFile2.str();
+        run_cmd(sh1);
+        run_cmd(sh2);
+        run_cmd(rmSh1);
+        run_cmd(rmSh2);
+        if(done){
+            return;
+        }
+        outFile1.str("");
+        outFile2.str("");
+        output_index++;
+        outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
+        outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
+        splitGzFq1 = gzopen(outFile1.str().c_str(), "wb");
+        splitGzFq2 = gzopen(outFile2.str().c_str(), "wb");
+        reads_number=0;
         int tmp_index=output_index;
         int lineNum=0;
         int readsNum=0;
@@ -1855,24 +1878,16 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,i
                 if(reads_number==gp.cleanOutSplit){
                     reads_number = 0;
                     gzclose(splitGzFq1);
-                    if(exists){
-                        string backup=outFile1.str()+".backup";
-                        outFile1.str("");
-                        outFile1<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq1;
-                        string runSh="mv "+outFile1.str()+" "+backup+";cat "+backup+" "+tmpOut1.str()+" >"+outFile1.str()+";rm "+backup+" "+tmpOut1.str();
-                        run_cmd(runSh);
-                    }
                     output_index++;
                     outFile1.str("");
                     outFile1 << gp.output_dir << "/split." << output_index << "." << gp.clean_fq1;
                     splitGzFq1 = gzopen(outFile1.str().c_str(), "wb");
-                    gzsetparams(splitGzFq1, 2, Z_DEFAULT_STRATEGY);
-                    gzbuffer(splitGzFq1, 1024 * 1024 * 10);
                     readsNum++;
                 }
             }
 
         }
+
         lineNum=0;
         readsNum=0;
         output_index=tmp_index;
@@ -1887,13 +1902,6 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,i
                 if(reads_number==gp.cleanOutSplit){
                     reads_number=0;
                     gzclose(splitGzFq2);
-                    if(exists){
-                        string backup2=outFile2.str()+".backup";
-                        outFile2.str("");
-                        outFile2<<gp.output_dir<<"/split."<<output_index<<"."<<gp.clean_fq2;
-                        string runSh2="mv "+outFile2.str()+" "+backup2+";cat "+backup2+" "+tmpOut2.str()+" >"+outFile2.str()+";rm "+backup2+" "+tmpOut2.str();
-                        run_cmd(runSh2);
-                    }
                     output_index++;
                     outFile2.str("");
                     outFile2 << gp.output_dir << "/split." << output_index << "." << gp.clean_fq2;
@@ -1904,12 +1912,14 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,i
                 }
             }
         }
-
-
         gzclose(splitGzFq1);
         gzclose(splitGzFq2);
         gzclose(gzCleanSmall1);
         gzclose(gzCleanSmall2);
+        string rmsh1="rm "+cleanSmallFile1.str();
+        string rmsh2="rm "+cleanSmallFile2.str();
+        run_cmd(rmsh1);
+        run_cmd(rmsh2);
     }else{
         cleanSmallFile1<<gp.output_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r1.fq";
         cleanSmallFile1<<gp.output_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r2.fq";
@@ -2018,10 +2028,10 @@ void peProcess::extractReadsToFile(int cycle,int thread_index,int fileReadsNum,i
         fclose(nongzCleanSmall1);
         fclose(nongzCleanSmall2);
     }
-    string rmCmd1="rm "+cleanSmallFile1.str();
-    string rmCmd2="rm "+cleanSmallFile2.str();
-    run_cmd(rmCmd1);
-    run_cmd(rmCmd2);
+//    string rmCmd1="rm "+cleanSmallFile1.str();
+//    string rmCmd2="rm "+cleanSmallFile2.str();
+//    run_cmd(rmCmd1);
+//    run_cmd(rmCmd2);
 }
 void peProcess::extractReadsToFile(int cycle,int thread_index,int reads_number,string position,bool gzFormat){
     ostringstream cleanSmallFile1,cleanSmallFile2;
@@ -2150,6 +2160,8 @@ void* peProcess::smallFilesProcess(){
                 }
             }
             if (subThreadAllDone) {
+                vector<string> readyCatR1Files;
+                vector<string> readyCatR2Files;
                 int ready_cycles = 0;
                 for (int i = 0; i < gp.threads_num; i++) {
                     if (readyCleanFiles1[i].size() > ready_cycles) {
@@ -2157,6 +2169,9 @@ void* peProcess::smallFilesProcess(){
                     }
                 }
                 string readyR1TrimSmallFiles,readyR2TrimSmallFiles;
+                int lastCycle=0;
+                int lastI=0;
+                int lastfileReadsNum=0;
                 for (int cycle = cur_cat_cycle; cycle < ready_cycles; cycle++) {
                     for (int i = 0; i < gp.threads_num; i++) {
                         if (cycle==ready_cycles-1 && readyCleanFiles1[i].size() < ready_cycles) {
@@ -2171,12 +2186,33 @@ void* peProcess::smallFilesProcess(){
                                 readyR2TrimSmallFiles+=" "+gp.output_dir+"/"+tmp_dir+"/thread."+to_string(i)+"."+to_string(cycle)+".trim.r2.fq";
                             }
                         }
+                        ostringstream readyCatR1CleanFile,readyCatR2CleanFile;
+                        readyCatR1CleanFile<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<i<<"."<<cycle<<".clean.r1.fq.gz";
+                        readyCatR2CleanFile<<gp.output_dir<<"/"<<tmp_dir<<"/thread."<<i<<"."<<cycle<<".clean.r2.fq.gz";
                         int fileReadsNum=clean_file_readsNum[i][cycle];
-
-                        extractReadsToFile(cycle, i, fileReadsNum,lastUncompleteFileReadsNumber, "head",
+                        lastCycle=cycle;
+                        lastI=i;
+                        lastfileReadsNum=fileReadsNum;
+                        //cur_avaliable_total_reads_number+=fileReadsNum;
+                        if(fileReadsNum<=gp.cleanOutSplit-lastUncompleteFileReadsNumber){
+                            readyCatR1Files.push_back(readyCatR1CleanFile.str());
+                            readyCatR2Files.push_back(readyCatR2CleanFile.str());
+                            lastUncompleteFileReadsNumber+=fileReadsNum;
+                        }else{
+                            extractReadsToFile(cycle, i,readyCatR1Files,readyCatR2Files,fileReadsNum,lastUncompleteFileReadsNumber, "head",
                                                outputFileIndex,
-                                               gp.cleanOutGzFormat);
+                                               gp.cleanOutGzFormat,false);
+                            readyCatR1Files.clear();
+                            readyCatR2Files.clear();
+                        }
+                        readyCatR1CleanFile.str("");
+                        readyCatR2CleanFile.str("");
                     }
+                }
+                if(readyCatR1Files.size()>0){
+                    extractReadsToFile(lastCycle, lastI,readyCatR1Files,readyCatR2Files,lastfileReadsNum,lastUncompleteFileReadsNumber, "head",
+                                       outputFileIndex,
+                                       gp.cleanOutGzFormat,true);
                 }
                 if (!gp.trim_fq1.empty()) {
                     string mergeShell1="cat "+readyR1TrimSmallFiles+" >>"+gp.output_dir+"/"+gp.trim_fq1;
