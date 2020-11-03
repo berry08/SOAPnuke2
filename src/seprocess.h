@@ -11,7 +11,9 @@
 #include "global_parameter.h"
 #include "global_variable.h"
 #include "sequence.h"
+#include "BloomFilter.h"
 #include <algorithm>
+#include <fstream>
 #define max_thread 48
 struct SEstatOption
 {
@@ -64,6 +66,12 @@ public:
     void extractReadsToFile(int cycle,int thread_index,int reads_number,string position,int& output_index,bool gzFormat);
     void extractReadsToFile(int cycle,int thread_index,int reads_number,string position,bool gzFormat);
     void addCleanList(int tmp_cycle,int index);
+    int dupNum;
+    mutex checkDup;
+    BloomFilter* dupDB;
+    set<string> checkDupMap;
+    gzFile dupOut1;
+    mutex logLock;
 	//void peOutput(outputOption opt);
 public:
 	C_global_parameter gp;
@@ -91,7 +99,7 @@ private:
 	vector<C_fastq> fq1s;
 	vector<C_fastq> trim_output_fq1;
 	vector<C_fastq> clean_output_fq1;
-	
+
 	//C_fastq fastq1;
 	int used_threads_num;
 	string random_num;

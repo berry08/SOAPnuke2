@@ -2,11 +2,13 @@
 #define GC_H
 
 #include <string>
+#include <string.h>
 #include <vector>
 #include <sstream>
 #include <cctype>
 #include <set>
 #include <map>
+#include <math.h>
 using namespace::std;
 class quartile_result{
 public:
@@ -23,7 +25,7 @@ vector<string> get_se_hard_trim(string a);
 void check_gz_file(string a);
 int check_gz_empty(string a);
 //void remove_space(string &a);
-//int file_exist_and_not_empty(string file_name);
+int file_exist_and_not_empty(string file_name);
 //void uniq_vector(vector<string> &a);
 string get_local_time();
 void line_split(string line_info,char sep,vector<string> &elements);
@@ -47,4 +49,8 @@ int check_bai_ok(string bin_path,string bam_file);
 string get_exe_path(string path);
 string link_dir_file(string dir,string file);
 void chomp_space(string& a,string type);
+void mkDir(string dir);
+void mkDir(string dir,mode_t mode);
+long long guessReadsNum(string fq1);
+long long guessReadsNum(string fq1,string fq2);
 #endif

@@ -2,6 +2,8 @@
 #define _GLOBAL_PARAMETER_H
 #include <string>
 #include <functional>
+#include <vector>
+//#include "mGzip.h"
 using namespace::std;
 class C_global_parameter{
 //common parameter
@@ -14,7 +16,69 @@ public:
                                          mis_(0.1), readLen_(0), readLen2_(0), outDir_("."), onlyStat_(false), isPE_(true),minReadLength(50),cutAdaptor(false),cutBasesNumber(0),
                                          isAdptList_(true), isFull_(false), size_(0), cleanQualSys_(ILLUMINA_), filterAdapter_(true),seqType_(0),outType_(0),highAType_(0)
 	*/
-	C_global_parameter():is_streaming(false),seq_type("0"),index_remove(false),qualityPhred(33),outputQualityPhred(33),adapter_discard_or_trim("discard"),contam_discard_or_trim("discard"),adapter_method("hd"),whether_add_pe_info(false),output_file_type("fastq"),lowQual(5),lowQualityBaseRatio(0.5),meanQuality(-1),n_ratio(0.05),highA_ratio(-1),polyG_tail(-1),polyX_num(-1),overlap_length(-1),peMismatchRatio(0.1),max_read_length(-1),min_read_length(30),cleanOutSplit(0),have_output1(0),have_output2(0),adaMis(2),adaMR(0.5),adaMis2(2),adaMR2(0.5),ctMatchR("0.2"),adaEdge(6),adaEdge2(6),adaRCtg(6),adaRAr(0.8),adaRMa(5),adaREr(0.4),adaRMm(4),threads_num(6),patchSize(0),split_line(10000000),mode(""),total_reads_num(0),f_total_reads_ratio(0),l_total_reads_num(0),total_reads_num_random(true),clean_file_reads(0),catWhenrunning(true),inputGzformat(true),cleanOutGzFormat(true),trimOutGzformat(true){};
+	C_global_parameter(){
+        mode="";
+        is_streaming=false;
+        seq_type="0";
+        adapter_discard_or_trim="discard";
+        index_remove=false;
+        qualityPhred=33;
+        outputQualityPhred=33;
+        contam_discard_or_trim="discard";
+        adapter_method="hd";
+        whether_add_pe_info=false;
+        output_file_type="fastq";
+        lowQual=5;
+        lowQualityBaseRatio=0.5;
+        meanQuality=-1;
+        n_ratio=0.05;
+        highA_ratio=-1;
+        polyG_tail=-1;
+        polyX_num=-1;
+        overlap_length=-1;
+        peMismatchRatio=0.1;
+        max_read_length=-1;
+        min_read_length=30;
+        cleanOutSplit=0;
+        have_output1=0;
+        have_output2=0;
+        adaMis=2;
+        adaMR=0.5;
+        adaMis2=2;
+        adaMR2=0.5;
+        ctMatchR="0.2";
+        adaEdge=6;
+        adaEdge2=6;
+        adaRCtg=6;
+        adaRAr=0.8;
+        adaRMa=5;
+        adaREr=0.4;
+        adaRMm=4;
+        threads_num=6;
+        patchSize=0;
+        split_line=10000000;
+        total_reads_num=0;
+        f_total_reads_ratio=0;
+        l_total_reads_num=0;
+        total_reads_num_random=true;
+        clean_file_reads=0;
+        catWhenrunning=true;
+        inputGzformat=true;
+        cleanOutGzFormat=true;
+        trimOutGzformat=true;
+        barcodeListPath="";
+        barcodeRegionStr="101_10,117_10,133_10";
+        notCutNoLFR=false;
+        inputAsList=false;
+        tenX=false;
+        barcodeNumInList=0;
+        //whether_mGzip=false;
+        rmdup=false;
+        approximateReadsNum=0;
+        //max mem limit:4G ,user should set a larger value if want use more memory
+        memSizeUsedInRmdup=1024L*1024*1024*4;
+        expectedFalsePositive=0;
+    };
 	//C_global_parameter(int argc,char* argv[]);
 
 	string mode;
@@ -34,6 +98,8 @@ public:
 	//adapter
 	string adapter_discard_or_trim;
 	string adapter_method;
+	vector<string> ada1s;
+	vector<string> ada2s;
 	string adapter1_seq,adapter2_seq;
 	string contam_discard_or_trim;
 	string contam1_seq,contam2_seq;
@@ -100,6 +166,24 @@ public:
 	bool inputGzformat;
 	//filterMeta module
 		//adapter find method is same as filter module
+
+    //cram reference
+    string reference;
+    //stLFR
+    string barcodeListPath;
+    string barcodeRegionStr;
+    bool notCutNoLFR;
+    bool inputAsList;
+    bool tenX;
+    int barcodeNumInList;
+
+    //bool whether_mGzip;
+    //static vector<threadDataInfo> threadInfo;
+
+    bool rmdup;
+    long long approximateReadsNum;
+    long memSizeUsedInRmdup;
+    float expectedFalsePositive;
 };
 
 #endif

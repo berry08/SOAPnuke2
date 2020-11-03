@@ -34,7 +34,8 @@ seProcess::seProcess(C_global_parameter m_gp){
 	gz_clean_out1=new gzFile[gp.threads_num];
 	nongz_clean_out1=new FILE*[gp.threads_num];
 	multi_gzfq1=new gzFile[gp.threads_num];
-	gzFile* multi_gzfq1;
+    multi_Nongzfq1=new FILE*[gp.threads_num];
+	//gzFile* multi_gzfq1;
 
 	se_local_fs=new C_filter_stat[gp.threads_num];
 	se_local_raw_stat1=new C_fastq_file_stat[gp.threads_num];
@@ -53,6 +54,50 @@ seProcess::seProcess(C_global_parameter m_gp){
     }
     end_sub_thread=0;
     patch=160/gp.threads_num;
+    if(gp.rmdup) {
+        //estimate total reads number
+
+        long long guessedReadsNum = 0;
+        if (gp.approximateReadsNum == 0) {
+            string fqPath=gp.fq1_path;
+            if(gp.inputAsList){
+                ifstream inList(gp.fq1_path);
+                while(getline(inList,fqPath)){
+                    if(!file_exist_and_not_empty(fqPath)){
+                        cerr<<"Error:expected fastq file list but actually not,"<<gp.fq1_path<<endl;
+                        exit(1);
+                    }
+                    guessedReadsNum += guessReadsNum(fqPath);
+                }
+                inList.close();
+            }else{
+                guessedReadsNum += guessReadsNum(fqPath);
+            }
+        } else {
+            guessedReadsNum = gp.approximateReadsNum;
+        }
+        int multiple = 50;
+        if(gp.expectedFalsePositive>0 && gp.expectedFalsePositive<1){
+            multiple=log(gp.expectedFalsePositive)/log(0.618);
+            if(multiple<30){
+                multiple=30;
+            }
+        }
+        while (multiple * guessedReadsNum  > maxBfSize) {
+            multiple -= 5;
+            if (multiple < 30) {
+                cerr << "Error:reads number maybe is too large to do remove duplication" << endl;
+                exit(1);
+            }
+        }
+        dupDB = new BloomFilter(guessedReadsNum, multiple);
+        if(dupDB->realUseByteSize>gp.memSizeUsedInRmdup){
+            cerr<<"Error:given memSize is small, maybe it should be at least "<<dupDB->realUseByteSize<<endl;
+            exit(1);
+        }
+        dupNum=0;
+        dupOut1=gzopen((gp.output_dir+"/dupReads1.gz").c_str(),"wb");
+    }
 }
 void seProcess::print_stat(){
 	string filter_out=gp.output_dir+"/Statistics_of_Filtered_Reads.txt";
@@ -89,6 +134,7 @@ void seProcess::print_stat(){
 	}
 	of_filter_stat<<"Item\tTotal\tPercentage"<<endl;
 	vector<string> filter_items;
+    filter_items.emplace_back("Reads are duplicate");
 	filter_items.emplace_back("Reads limited to output number");
 	filter_items.emplace_back("Reads with filtered tile");
 	filter_items.emplace_back("Reads with filtered fov");
@@ -103,6 +149,7 @@ void seProcess::print_stat(){
 	filter_items.emplace_back("Reads with adapter");
 	filter_items.emplace_back("Reads with global contam sequence");
 	map<string,long long> filter_number;
+    filter_number["Reads are duplicate"]=gv.fs.dupReadsNum;
 	filter_number["Reads with contam sequence"]=gv.fs.include_contam_seq_num;
 	filter_number["Reads with global contam sequence"]=gv.fs.include_global_contam_seq_num;
 	filter_number["Reads too short"]=gv.fs.short_len_num;
@@ -212,8 +259,10 @@ void seProcess::print_stat(){
 	}
 	of_readPos_qual_stat1<<"Mean\tMedian\tLower quartile\tUpper quartile\t10th percentile\t90th percentile"<<endl;
 	
-	float raw1_q20[gv.raw1_stat.gs.read_max_length],raw1_q30[gv.raw1_stat.gs.read_max_length];
-	float clean1_q20[gv.raw1_stat.gs.read_max_length],clean1_q30[gv.raw1_stat.gs.read_max_length];
+    float* raw1_q20=new float[gv.raw1_stat.gs.read_max_length];
+    float* raw1_q30=new float[gv.raw1_stat.gs.read_max_length];
+    float* clean1_q20=new float[gv.raw1_stat.gs.read_max_length];
+    float* clean1_q30=new float[gv.raw1_stat.gs.read_max_length];
 	for(int i=0;i!=gv.raw1_stat.gs.read_length;i++){
 		of_readPos_qual_stat1<<i+1<<"\t";
 		unsigned long long raw1_q20_num(0),raw1_q30_num(0),raw1_total(0);
@@ -264,6 +313,10 @@ void seProcess::print_stat(){
 		of_readPos_qual_stat1<<setprecision(0)<<clean1_quar.median<<"\t"<<clean1_quar.lower_quar<<"\t"<<clean1_quar.upper_quar<<"\t"<<clean1_quar.first10_quar<<"\t"<<clean1_quar.last10_quar<<endl;
 		of_q2030_stat1<<i+1<<setiosflags(ios::fixed)<<setprecision(4)<<"\t"<<raw1_q20[i]<<"\t"<<raw1_q30[i]<<"\t"<<clean1_q20[i]<<"\t"<<clean1_q30[i]<<endl;
 	}
+    delete[] raw1_q20;
+    delete[] raw1_q30;
+    delete[] clean1_q20;
+    delete[] clean1_q30;
 	of_readPos_qual_stat1.close();
 	of_q2030_stat1.close();
 	of_trim_stat1<<"Pos\tHeadLowQual\tHeadFixLen\tTailAdapter\tTailLowQual\tTailFixLen\tCleanHeadLowQual\tCleanHeadFixLen\tCleanTailAdapter\tCleanTailLowQual\tCleanTailFixLen"<<endl;
@@ -369,6 +422,9 @@ void seProcess::update_stat(C_fastq_file_stat& fq1s_stat,C_filter_stat& fs_stat,
 		gv.fs.long_len_num+=fs_stat.long_len_num;
 		gv.fs.include_contam_seq_num+=fs_stat.include_contam_seq_num;
 		gv.fs.include_global_contam_seq_num+=fs_stat.include_global_contam_seq_num;
+        if(gp.rmdup){
+            gv.fs.dupReadsNum+=fs_stat.dupReadsNum;
+        }
 	}else if(type=="trim"){
 		//gv.trim1_stat.gs.read_length=fq1s_stat.gs.read_length;	//generate stat
 		gv.trim1_stat.gs.reads_number+=fq1s_stat.gs.reads_number;
@@ -639,8 +695,39 @@ void* seProcess::stat_se_fqs(SEstatOption opt,string dataType){
 
 void seProcess::filter_se_fqs(SEcalOption opt){
 	//C_reads_trim_stat cut_pos;
+    //check dup
+    bool* dupFilter=new bool[opt.fq1s->size()];
+    if(gp.rmdup){
+        checkDup.lock();
+        memset(dupFilter,false,opt.fq1s->size());
+        int iter=0;
+        for(vector<C_fastq>::iterator i=opt.fq1s->begin();i!=opt.fq1s->end();i++){
+            string checkSeq=(*i).sequence;
+//            if(checkDupMap.find(checkSeq)!=checkDupMap.end()){
+//                dupNum++;
+//                cout<<"real dup:\t"<<(*i).sequence<<endl;
+//            }else{
+//                checkDupMap.insert(checkSeq);
+//            }
+            if(dupDB->query(checkSeq)){
+//                cout<<"detected dup:\t"<<(*i).sequence<<endl;
+                dupNum++;
+                dupFilter[iter]=true;
+                gzwrite(dupOut1,(*i).toString().c_str(),(*i).toString().size());
+            }else{
+                dupDB->add();
+            }
+            iter++;
+        }
+        checkDup.unlock();
+    }
+    int iter=0;
 	for(vector<C_fastq>::iterator i=opt.fq1s->begin();i!=opt.fq1s->end();i++){
 		C_single_fastq_filter se_fastq_filter=C_single_fastq_filter(*i,gp);
+        if(dupFilter[iter]){
+            se_fastq_filter.read_result.dup=true;
+        }
+        iter++;
 		se_fastq_filter.se_trim(gp);
 		if(gp.adapter_discard_or_trim=="trim" || gp.contam_discard_or_trim=="trim" || !gp.trim.empty() || !gp.trimBadHead.empty() || !gp.trimBadTail.empty()){
 			(*i).head_hdcut=se_fastq_filter.read.head_hdcut;
@@ -670,6 +757,7 @@ void seProcess::filter_se_fqs(SEcalOption opt){
 			}
 		}
 	}
+    delete[] dupFilter;
 	//return cut_pos;
 }
 
@@ -697,8 +785,8 @@ void seProcess::C_fastq_init(C_fastq& a){
 	a.seq_id="";
 	a.sequence="";
 	a.qual_seq="";
-	a.adapter_seq=gp.adapter1_seq;
-	a.contam_seq=gp.contam1_seq;
+//	a.adapter_seq=gp.adapter1_seq;
+//	a.contam_seq=gp.contam1_seq;
 	//a.global_contams=gp.global_contams;
 	a.head_hdcut=-1;
 	a.head_lqcut=-1;
@@ -709,9 +797,10 @@ void seProcess::C_fastq_init(C_fastq& a){
 	a.global_contam_5pos=-1;
 	a.global_contam_3pos=-1;
 	a.raw_length=0;
-	if(gp.module_name=="filtersRNA"){
-		a.adapter_seq2=gp.adapter2_seq;
-	}
+	a.pairPos=1;
+//	if(gp.module_name=="filtersRNA"){
+//		a.adapter_seq2=gp.adapter2_seq;
+//	}
 	if(!gp.trim.empty()){
 		vector<string> tmp_eles=get_se_hard_trim(gp.trim);
 		a.head_trim_len=tmp_eles[0];
@@ -749,7 +838,9 @@ int seProcess::read(vector<C_fastq>& pe1,ifstream& infile1){
 }
 
 void* seProcess::sub_thread(int index){
+    logLock.lock();
     of_log<<get_local_time()<<"\tthread "<<index<<" start"<<endl;
+    logLock.unlock();
 //	}
     create_thread_read(index);
     int thread_cycle=-1;
@@ -880,7 +971,9 @@ void* seProcess::sub_thread(int index){
     }
     check_disk_available();
     sub_thread_done[index]=1;
+    logLock.lock();
     of_log<<get_local_time()<<"\tthread "<<index<<" done\t"<<endl;
+    logLock.unlock();
     return &se_bq_check;
 }
 void seProcess::addCleanList(int tmp_cycle,int index){
@@ -910,9 +1003,7 @@ void seProcess::merge_stat(){
 		if(!gp.trim_fq1.empty()){
 			update_stat(se_local_trim_stat1[i],se_local_fs[i],"trim");
 		}
-		if(!gp.clean_fq1.empty()){
-			update_stat(se_local_clean_stat1[i],se_local_fs[i],"clean");
-		}
+        update_stat(se_local_clean_stat1[i],se_local_fs[i],"clean");
 	}
 }
 void seProcess::create_thread_read(int index){
@@ -1017,7 +1108,7 @@ void* seProcess::smallFilesProcess(){
     if(gp.cleanOutSplit>0){
         int outputFileIndex=0;
         int cur_avaliable_total_reads_number = 0;
-        int sticky_tail_reads_number = 0;
+//        int sticky_tail_reads_number = 0;
         string tidyFile1=gp.output_dir+"/split.0."+gp.clean_fq1;
         ostringstream rmCmd1;
         rmCmd1<<"rm "<<gp.output_dir << "/split.*fq*";
@@ -1074,7 +1165,7 @@ void* seProcess::smallFilesProcess(){
                 }
                 break;
             }
-            int stopIndex=0;
+//            int stopIndex=0;
 
             int ready_cycles = readyCleanFiles1[0].size();
             for (int i = 1; i < gp.threads_num; i++) {
@@ -1362,7 +1453,7 @@ void seProcess::extractReadsToFile(int cycle,int thread_index,int reads_number,s
         }
     }else{
         cleanSmallFile1<<gp.output_dir<<"/thread."<<thread_index<<"."<<cycle<<".clean.r1.fq";
-        FILE* nongzCleanSmall1,*nongzCleanSmall2;
+        FILE* nongzCleanSmall1;
         nongzCleanSmall1=fopen(cleanSmallFile1.str().c_str(),"r");
 
         FILE* splitNonGzFq1;
@@ -1489,6 +1580,7 @@ void seProcess::thread_process_reads(int index,int& cycle,vector<C_fastq> &fq1s)
         trim_result1.clear();
         closeSmallTrimFileHandle(index);
     }
+    opt_clean.fq1s=&clean_result1;
     if(!gp.clean_fq1.empty()){
         opt_clean.stat1=&se_local_clean_stat1[index];
         if(gp.cleanOutGzFormat){
@@ -1497,7 +1589,7 @@ void seProcess::thread_process_reads(int index,int& cycle,vector<C_fastq> &fq1s)
             seWrite(clean_result1,nongz_clean_out1[index]);	//output clean files
         }
         closeSmallCleanFileHandle(index);
-        opt_clean.fq1s=&clean_result1;
+        
         stat_se_fqs(opt_clean,"clean");	//statistic clean fastqs
         if(gp.is_streaming){
             se_write_m.lock();
@@ -1545,10 +1637,17 @@ void seProcess::run_extract_random(){
 	}
 	if(total_clean_reads<gp.l_total_reads_num){
 		cerr<<"Warning:the reads number in clean fastq file("<<total_clean_reads<<") is less than you assigned to output("<<gp.l_total_reads_num<<")"<<endl;
+        return;
 	}
 	//cout<<gp.l_total_reads_num<<"\t"<<total_clean_reads<<endl;
 	//vector<int> include_threads;
+    if(gp.l_total_reads_num==0){
+        cerr<<"Error:assigned reads number should not be 0"<<endl;
+        return;
+    }
     int interval=total_clean_reads/gp.l_total_reads_num;
+	if(interval==1)
+	    return;
     string in1=gp.output_dir+"/"+gp.clean_fq1;
     string out1=gp.cleanOutGzFormat?gp.output_dir+"/cleanRandomExtractReads.r1.fq.gz":gp.output_dir+"/cleanRandomExtractReads.r1.fq";
     sub_extract(in1,interval,out1);
@@ -1558,17 +1657,19 @@ void seProcess::run_extract_random(){
 }
 
 void seProcess::process(){
-    string mkdir_str="mkdir -p "+gp.output_dir;
-    if(system(mkdir_str.c_str())==-1){
-        cerr<<"Error:mkdir fail"<<endl;
-        exit(1);
-    }
+    mkDir(gp.output_dir);
+//    string mkdir_str="mkdir -p "+gp.output_dir;
+//    if(system(mkdir_str.c_str())==-1){
+//        cerr<<"Error:mkdir fail"<<endl;
+//        exit(1);
+//    }
     of_log.open(gp.log.c_str());
     if(!of_log){
         cerr<<"Error:cannot open such file,"<<gp.log<<endl;
         exit(1);
     }
     of_log<<get_local_time()<<"\tAnalysis start!"<<endl;
+    of_log<<"memSize used in rmdup:"<<(dupDB->realUseByteSize)/(1024*1024)<<"M"<<endl;
     make_tmpDir();
     thread t_array[gp.threads_num];
     //thread read_monitor(bind(&peProcess::monitor_read_thread,this));
@@ -1592,6 +1693,12 @@ void seProcess::process(){
     print_stat();
     remove_tmpDir();
     check_disk_available();
+    if(gp.rmdup){
+        gzclose(dupOut1);
+    }
+    if(gp.rmdup) {
+        of_log << "dup number:\t" << dupNum << endl;
+    }
     of_log<<get_local_time()<<"\tAnalysis accomplished!"<<endl;
     of_log.close();
 }
@@ -1638,11 +1745,13 @@ void seProcess::make_tmpDir(){
 		tmp_str<<(char)tmp_rand;
 	}
 	tmp_dir="TMP"+tmp_str.str();
-	string mkdir_str="mkdir -p "+gp.output_dir+"/"+tmp_dir;
-	if(system(mkdir_str.c_str())==-1){
-		cerr<<"Error:mkdir error,"<<mkdir_str<<endl;
-		exit(1);
-	}
+	string tmp_dir_abs=gp.output_dir+"/"+tmp_dir;
+	mkDir(tmp_dir_abs);
+//	string mkdir_str="mkdir -p "+gp.output_dir+"/"+tmp_dir;
+//	if(system(mkdir_str.c_str())==-1){
+//		cerr<<"Error:mkdir error,"<<mkdir_str<<endl;
+//		exit(1);
+//	}
 }
 void seProcess::output_fastqs(string type,vector<C_fastq> &fq1,gzFile outfile){
 	//m.lock();

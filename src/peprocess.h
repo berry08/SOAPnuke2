@@ -12,11 +12,17 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <algorithm>
+#include <string.h>
 #include "process_argv.h"
 #include "global_parameter.h"
 #include "global_variable.h"
 #include "sequence.h"
-
+#include "BloomFilter.h"
+#include "ReverseBloomFilter.h"
+#include "rmdup.h"
+#include "Md5.h"
+//0:bf 1:rbf 2:normal
+#define RMDUP 2
 #define max_thread 48
 struct PEstatOption
 {
@@ -38,6 +44,9 @@ struct PEcalOption
 	    fq2s=NULL;
         trim_result1=trim_result2=clean_result1=clean_result2=NULL;
 	}
+    ~PEcalOption(){
+        
+    }
 };
 class peProcess{
 public:
@@ -46,7 +55,8 @@ public:
 	void print_stat();
 	void update_stat(C_fastq_file_stat& fq1s_stat,C_fastq_file_stat& fq2s_stat,C_filter_stat& fs_stat,string type);
 	void* stat_pe_fqs(PEstatOption opt,string dataType);
-	void filter_pe_fqs(PEcalOption* opt);
+    virtual void filter_pe_fqs(PEcalOption* opt);
+    virtual void filter_pe_fqs(PEcalOption *opt, int index);
 	int read(vector<C_fastq>& pe1,vector<C_fastq>& pe2,ifstream& infile1,ifstream& infile2);
 	void peWrite(vector<C_fastq>& pe1,vector<C_fastq>& pe2,gzFile out1,gzFile out2);
 	void peWrite(vector<C_fastq>& pe1,vector<C_fastq>& pe2,FILE* out1,FILE* out2);
@@ -55,7 +65,9 @@ public:
 	void output_fastqs(string type,vector<C_fastq> &fq1,FILE* outfile);
 	void merge_stat();
 	void C_fastq_init(C_fastq& a,C_fastq& b);
-	void* sub_thread(int index);
+
+    virtual void* sub_thread(int index);
+    virtual void* sub_thread_rmdup_step1(int index);
 	void catRmFile(int index,int cycle,string type,bool gzFormat);
 	void catRmFile(vector<int> indexes,int cycle,string type,bool gzFormat);
 	void* smallFilesProcess();
@@ -77,6 +89,14 @@ public:
     void extractReadsToFile(int cycle,int thread_index,int reads_number,string position,bool gzFormat);
     void reArrangeReads(int cycle,bool gzFormat,bool split,int& splitIndex,int& preNum);
     void addCleanList(int tmp_cycle,int index);
+    int dupNum;
+    mutex checkDup;
+    BloomFilter* dupDB;
+    ReverseBloomFilter* RdupDB;
+//    set<string> checkDupMap;
+    gzFile dupOut1,dupOut2;
+    gzFile* dupThreadOut1,*dupThreadOut2;
+    mutex logLock;
 public:
 	C_global_parameter gp;
 	C_global_variable gv;
@@ -112,8 +132,16 @@ public:
 	int* sub_thread_done;
 	int end_sub_thread;
 	int patch;
+    uint64_t* threadReadsNum;
+    uint64_t* totalData;
+	uint64_t* threadCurReadReadsNumIdx;
+    vector<vector<uint64_t*> > threadData;
+    vector<vector<size_t> > threadDataNum;
+    bool* dupFlag;
 private:
 	int used_threads_num;
+
+
 };
 
 #endif
