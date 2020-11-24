@@ -525,44 +525,72 @@ void *processStLFR::sub_thread_rmdup_step1(int index) {
     }
 }
 void processStLFR::filter_pe_fqs(PEcalOption *opt) {
-    vector<C_fastq>::iterator i2=opt->fq2s->begin();
-    vector<C_fastq>::iterator i_end=opt->fq1s->end();
-    bool* dupFilter=new bool[opt->fq1s->size()];
-    if(gp.rmdup){
-        checkDup.lock();
-        memset(dupFilter,false,opt->fq1s->size());
-        int iter=0;
-        for(vector<C_fastq>::iterator i=opt->fq1s->begin();i!=i_end;i++){
-            string checkSeq=(*i).sequence+(*i2).sequence;
-//            if(checkDupMap.find(checkSeq)!=checkDupMap.end()){
-//                dupNum++;
+    vector<C_fastq>::iterator
+            i2
+            = opt->fq2s
+                 ->begin();
+    vector<C_fastq>::iterator
+            i_end
+            = opt->fq1s
+                 ->end();
+//    bool* dupFilter=new bool[opt->fq1s->size()];
+//    if(gp.rmdup){
+//        checkDup.lock();
+//        memset(dupFilter,false,opt->fq1s->size());
+//        int iter=0;
+//        for(vector<C_fastq>::iterator i=opt->fq1s->begin();i!=i_end;i++){
+//            string checkSeq=(*i).sequence+(*i2).sequence;
+////            if(checkDupMap.find(checkSeq)!=checkDupMap.end()){
+////                dupNum++;
+////            }else{
+////                checkDupMap.insert(checkSeq);
+////            }
+//            if(dupDB->query(checkSeq)){
+//                dupFilter[iter]=true;
+//                gzwrite(dupOut1,(*i).toString().c_str(),(*i).toString().size());
+//                gzwrite(dupOut2,(*i2).toString().c_str(),(*i2).toString().size());
 //            }else{
-//                checkDupMap.insert(checkSeq);
+//                dupDB->add();
 //            }
-            if(dupDB->query(checkSeq)){
-                dupFilter[iter]=true;
-                gzwrite(dupOut1,(*i).toString().c_str(),(*i).toString().size());
-                gzwrite(dupOut2,(*i2).toString().c_str(),(*i2).toString().size());
-            }else{
-                dupDB->add();
-            }
-            iter++;
-            i2++;
-            if(i2==opt->fq2s->end()){
-                break;
-            }
-        }
-        checkDup.unlock();
-    }
-    i2=opt->fq2s->begin();
-    i_end=opt->fq1s->end();
-    int iter=0;
-    for(vector<C_fastq>::iterator i=opt->fq1s->begin();i!=i_end;i++){
-        string barcodeCombine=stLFRprocessBarcode(*i,*i2);
-        C_pe_fastq_filter pe_fastq_filter=C_pe_fastq_filter(*i,*i2,gp);
-        if(dupFilter[iter]){
-            pe_fastq_filter.reads_result.dup=true;
-        }
+//            iter++;
+//            i2++;
+//            if(i2==opt->fq2s->end()){
+//                break;
+//            }
+//        }
+//        checkDup.unlock();
+//    }
+//    i2=opt->fq2s->begin();
+//    i_end=opt->fq1s->end();
+    int
+            iter
+            = 0;
+    for (
+            vector<C_fastq>::iterator
+            i
+            = opt->fq1s
+                 ->begin();
+            i
+            != i_end;
+            i++
+            )
+    {
+        string
+                barcodeCombine
+                = stLFRprocessBarcode(
+                *i
+                , *i2
+                                     );
+        C_pe_fastq_filter
+                pe_fastq_filter
+                = C_pe_fastq_filter(
+                        *i
+                        , *i2
+                        , gp
+                                   );
+//        if(dupFilter[iter]){
+//            pe_fastq_filter.reads_result.dup=true;
+//        }
         iter++;
         pe_fastq_filter.setStLFRbarcode(barcodeCombine);
         /*int head_hdcut,head_lqcut,tail_hdcut,tail_lqcut,adacut_pos;
@@ -570,9 +598,23 @@ void processStLFR::filter_pe_fqs(PEcalOption *opt) {
     int global_contam_pos;
     int raw_length;*/
         pe_fastq_filter.pe_trim(gp);
-        if(gp.adapter_discard_or_trim=="trim" || gp.contam_discard_or_trim=="trim" || !gp.trim.empty() || !gp.trimBadHead.empty() || !gp.trimBadTail.empty()){
-            (*i).head_hdcut=pe_fastq_filter.fq1.head_hdcut;
-            (*i).head_lqcut=pe_fastq_filter.fq1.head_lqcut;
+        if (gp.adapter_discard_or_trim
+            == "trim"
+            || gp.contam_discard_or_trim
+               == "trim"
+            || !gp.trim
+                  .empty()
+            || !gp.trimBadHead
+                  .empty()
+            || !gp.trimBadTail
+                  .empty())
+        {
+            (*i).head_hdcut
+                            = pe_fastq_filter.fq1
+                                             .head_hdcut;
+            (*i).head_lqcut
+                            = pe_fastq_filter.fq1
+                                             .head_lqcut;
             (*i).tail_hdcut=pe_fastq_filter.fq1.tail_hdcut;
             (*i).tail_lqcut=pe_fastq_filter.fq1.tail_lqcut;
             (*i).adacut_pos=pe_fastq_filter.fq1.adacut_pos;
@@ -607,5 +649,5 @@ void processStLFR::filter_pe_fqs(PEcalOption *opt) {
             break;
         }
     }
-    delete[] dupFilter;
+//    delete[] dupFilter;
 }

@@ -1170,50 +1170,6 @@ void peProcess::filter_pe_fqs(PEcalOption* opt){
 	vector<C_fastq>::iterator i2=opt->fq2s->begin();
 	vector<C_fastq>::iterator i_end=opt->fq1s->end();
 	//check dup
-    bool* dupFilter=new bool[opt->fq1s->size()];
-    if(gp.rmdup){
-        checkDup.lock();
-        memset(dupFilter,false,opt->fq1s->size());
-        int iter=0;
-        for(vector<C_fastq>::iterator i=opt->fq1s->begin();i!=i_end;i++){
-            string checkSeq=(*i).sequence+(*i2).sequence;
-//            if(checkDupMap.find(checkSeq)!=checkDupMap.end()){
-//                dupNum++;
-//                cout<<"real dup:\t"<<(*i).sequence<<endl;
-//            }else{
-//                checkDupMap.insert(checkSeq);
-//            }
-            if(RMDUP==0) {
-                if (dupDB->query(checkSeq)) {
-//                cout<<"detected dup:\t"<<(*i).sequence<<endl;
-                    dupNum++;
-                    dupFilter[iter] = true;
-                    gzwrite(dupOut1, (*i).toString().c_str(), (*i).toString().size());
-                    gzwrite(dupOut2, (*i2).toString().c_str(), (*i2).toString().size());
-                } else {
-                    dupDB->add();
-                }
-            }else if(RMDUP==1){
-                if(RdupDB->query(checkSeq)){
-                    dupNum++;
-                    dupFilter[iter] = true;
-                    gzwrite(dupOut1, (*i).toString().c_str(), (*i).toString().size());
-                    gzwrite(dupOut2, (*i2).toString().c_str(), (*i2).toString().size());
-                }else{
-                    RdupDB->add();
-                }
-            }else{
-            }
-            iter++;
-            i2++;
-            if(i2==opt->fq2s->end()){
-                break;
-            }
-        }
-        checkDup.unlock();
-    }
-    i2=opt->fq2s->begin();
-    i_end=opt->fq1s->end();
     int iter=0;
 
 	for(vector<C_fastq>::iterator i=opt->fq1s->begin();i!=i_end;i++){
@@ -1222,9 +1178,6 @@ void peProcess::filter_pe_fqs(PEcalOption* opt){
 	int contam_pos;
 	int global_contam_pos;
 	int raw_length;*/
-        if(dupFilter[iter]){
-            pe_fastq_filter.reads_result.dup=true;
-        }
         iter++;
 		pe_fastq_filter.pe_trim(gp);
 		if(gp.adapter_discard_or_trim=="trim" || gp.contam_discard_or_trim=="trim" || !gp.trim.empty() || !gp.trimBadHead.empty() || !gp.trimBadTail.empty()){
@@ -1264,7 +1217,6 @@ void peProcess::filter_pe_fqs(PEcalOption* opt){
 			break;
 		}
 	}
-    delete[] dupFilter;
 	//return cut_pos;
 }
 void peProcess::filter_pe_fqs(PEcalOption* opt,int index){

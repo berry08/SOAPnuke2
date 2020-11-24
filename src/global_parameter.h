@@ -63,18 +63,20 @@ public:
         total_reads_num_random=true;
         clean_file_reads=0;
         catWhenrunning=true;
-        inputGzformat=true;
+        inputGzformat   =true;
         cleanOutGzFormat=true;
-        trimOutGzformat=true;
-        barcodeListPath="";
+        trimOutGzformat =true;
+        barcodeListPath ="";
         barcodeRegionStr="101_10,117_10,133_10";
-        notCutNoLFR=false;
-        inputAsList=false;
-        tenX=false;
+        notCutNoLFR     =false;
+        inputAsList     =false;
+        tenX            =false;
         barcodeNumInList=0;
         //whether_mGzip=false;
-        rmdup=false;
-        approximateReadsNum=0;
+        rmdup
+                        = false;
+        approximateReadsNum
+                        = 1;
         //max mem limit:4G ,user should set a larger value if want use more memory
         memSizeUsedInRmdup=1024L*1024*1024*4;
         expectedFalsePositive=0;

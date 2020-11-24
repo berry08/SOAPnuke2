@@ -20,7 +20,7 @@
 #include "BloomFilter.h"
 #include "ReverseBloomFilter.h"
 #include "rmdup.h"
-#include "Md5.h"
+//#include "Md5.h"
 //0:bf 1:rbf 2:normal
 #define RMDUP 2
 #define max_thread 48
