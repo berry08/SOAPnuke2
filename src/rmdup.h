@@ -17,7 +17,6 @@ class rmdup {
 private:
     uint64_t* data;
     uint64_t size;
-
     uint32_t getPrime();
 public:
     rmdup(uint64_t* data,uint64_t size);
