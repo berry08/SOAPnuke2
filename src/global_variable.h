@@ -111,7 +111,7 @@ class C_reads_pos_qual_stat
 {
 public:
 	C_reads_pos_qual_stat();
-	C_reads_pos_qual_stat(C_global_parameter gp);
+	C_reads_pos_qual_stat(C_global_parameter &gp);
 	long long *position_qual[READ_MAX_LEN];
 	// map<int,map<int,int> > position_qual_ratio;
 };
@@ -126,6 +126,7 @@ class C_fastq_file_stat
 {
 public:
 	C_fastq_file_stat();
+	C_fastq_file_stat(C_global_parameter &gp);
 	C_general_stat gs;
 	C_reads_pos_base_stat bs;
 	C_reads_pos_qual_stat qs;
@@ -136,7 +137,7 @@ class C_global_variable
 {
 public:
 	C_global_variable();
-	C_global_variable(C_global_parameter gp);
+	C_global_variable(C_global_parameter &gp);
 	C_filter_stat fs;
 	C_fastq_file_stat raw1_stat, raw2_stat, trim1_stat, trim2_stat, clean1_stat, clean2_stat;
 };
