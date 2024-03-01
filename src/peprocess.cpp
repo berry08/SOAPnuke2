@@ -47,7 +47,7 @@ peProcess::peProcess(C_global_parameter m_gp)
 	local_trim_stat2 = new C_fastq_file_stat[gp.threads_num];
 	local_clean_stat1 = new C_fastq_file_stat[gp.threads_num];
 	local_clean_stat2 = new C_fastq_file_stat[gp.threads_num];
-	for (int i = 0; i < gp.threads_num; i++)
+	for (uint64_t i = 0; i < gp.threads_num; i++)
 	{
 		local_raw_stat1[i] = C_fastq_file_stat(gp);
 		local_raw_stat2[i] = C_fastq_file_stat(gp);
@@ -73,7 +73,7 @@ peProcess::peProcess(C_global_parameter m_gp)
 	nongz_trim_out1 = new FILE *[gp.threads_num];
 	nongz_trim_out2 = new FILE *[gp.threads_num];
 	sub_thread_done = new int[gp.threads_num];
-	for (int i = 0; i < gp.threads_num; i++)
+	for (uint64_t i = 0; i < gp.threads_num; i++)
 	{
 		sub_thread_done[i] = 0;
 	}
@@ -84,7 +84,7 @@ peProcess::peProcess(C_global_parameter m_gp)
 	if (gp.rmdup)
 	{
 		// estimate total reads number
-		long long guessedReadsNum = 0;
+		uint64_t guessedReadsNum = 0;
 		if (gp.approximateReadsNum == 0)
 		{
 			string fqPath = gp.fq1_path;
@@ -145,7 +145,7 @@ peProcess::peProcess(C_global_parameter m_gp)
 		}
 		else
 		{
-			for (int i = 0; i < gp.threads_num; i++)
+			for (uint64_t i = 0; i < gp.threads_num; i++)
 			{
 				vector<uint64_t *> tmp;
 				threadData.push_back(tmp);
@@ -167,7 +167,7 @@ peProcess::peProcess(C_global_parameter m_gp)
 			dupThreadOut1 = new gzFile[gp.threads_num];
 			dupThreadOut2 = new gzFile[gp.threads_num];
 			mkDir(gp.output_dir);
-			for (int i = 0; i < gp.threads_num; i++)
+			for (uint64_t i = 0; i < gp.threads_num; i++)
 			{
 				dupThreadOut1[i] = gzopen((gp.output_dir + "/dupReads." + to_string(i) + ".1.gz").c_str(), "wb");
 				dupThreadOut2[i] = gzopen((gp.output_dir + "/dupReads." + to_string(i) + ".2.gz").c_str(), "wb");
@@ -240,7 +240,7 @@ void peProcess::print_stat()
 	filter_items.emplace_back("Reads with small insert size");
 	filter_items.emplace_back("Reads with adapter");
 
-	map<string, long long> filter_number, filter_pe1, filter_pe2, filter_overlap;
+	map<string, uint64_t> filter_number, filter_pe1, filter_pe2, filter_overlap;
 	filter_number["Reads are duplicate"] = gv.fs.dupReadsNum;
 	filter_number["Reads with global contam sequence"] = gv.fs.include_global_contam_seq_num;
 	filter_number["Reads with contam sequence"] = gv.fs.include_contam_seq_num;
@@ -304,8 +304,8 @@ void peProcess::print_stat()
 	filter_overlap["Reads with filtered fov"] = gv.fs.fov_num;
 	filter_overlap["Reads too long"] = gv.fs.long_len_num_overlap;
 	// filter_overlap["Reads limited to output number"]=gv.fs.output_reads_num;
-	long long total_filter_fq1_num = 0;
-	for (map<string, long long>::iterator ix = filter_number.begin(); ix != filter_number.end(); ix++)
+	uint64_t total_filter_fq1_num = 0;
+	for (map<string, uint64_t>::iterator ix = filter_number.begin(); ix != filter_number.end(); ix++)
 	{
 		total_filter_fq1_num += ix->second;
 	}
@@ -384,8 +384,8 @@ void peProcess::print_stat()
 	of_general_stat << "Total number of reads\t" << setprecision(15) << gv.raw1_stat.gs.reads_number << " (100.00%)\t" << gv.clean1_stat.gs.reads_number << " (100.00%)\t" << gv.raw2_stat.gs.reads_number << " (100.00%)\t" << gv.clean2_stat.gs.reads_number << " (100.00%)" << endl;
 	of_general_stat << "Number of filtered reads\t" << total_filter_fq1_num << " (" << filter_r1_ratio << "%)\t-\t" << total_filter_fq1_num << " (" << filter_r2_ratio << "%)\t-" << endl;
 	of_general_stat << "Total number of bases\t" << setprecision(15) << gv.raw1_stat.gs.base_number << " (100.00%)\t" << gv.clean1_stat.gs.base_number << " (100.00%)\t" << gv.raw2_stat.gs.base_number << " (100.00%)\t" << gv.clean2_stat.gs.base_number << " (100.00%)" << endl;
-	long long filter_base1 = total_filter_fq1_num * gv.raw1_stat.gs.read_length;
-	long long filter_base2 = total_filter_fq1_num * gv.raw1_stat.gs.read_length;
+	uint64_t filter_base1 = total_filter_fq1_num * gv.raw1_stat.gs.read_length;
+	uint64_t filter_base2 = total_filter_fq1_num * gv.raw1_stat.gs.read_length;
 	of_general_stat << "Number of filtered bases\t" << setprecision(15) << filter_base1 << " (" << filter_r1_ratio << "%)\t-\t" << filter_base2 << " (" << filter_r2_ratio << "%)\t-" << endl;
 	of_general_stat << "Number of base A\t" << setprecision(15) << gv.raw1_stat.gs.a_number << " (" << raw_r1[0] << "%)\t" << gv.clean1_stat.gs.a_number << " (" << clean_r1[0] << "%)\t" << gv.raw2_stat.gs.a_number << " (" << raw_r2[0] << "%)\t" << gv.clean2_stat.gs.a_number << " (" << clean_r2[0] << "%)" << endl;
 	of_general_stat << "Number of base C\t" << setprecision(15) << gv.raw1_stat.gs.c_number << " (" << raw_r1[1] << "%)\t" << gv.clean1_stat.gs.c_number << " (" << clean_r1[1] << "%)\t" << gv.raw2_stat.gs.c_number << " (" << raw_r2[1] << "%)\t" << gv.clean2_stat.gs.c_number << " (" << clean_r2[1] << "%)" << endl;
@@ -413,7 +413,7 @@ void peProcess::print_stat()
 	of_general_stat.close();
 	of_readPos_base_stat1 << "Pos\tA\tC\tG\tT\tN\tclean A\tclean C\tclean G\tclean T\tclean N" << endl;
 	of_readPos_base_stat2 << "Pos\tA\tC\tG\tT\tN\tclean A\tclean C\tclean G\tclean T\tclean N" << endl;
-	for (int i = 0; i < gv.raw1_stat.gs.read_length; i++)
+	for (uint64_t i = 0; i < gv.raw1_stat.gs.read_length; i++)
 	{
 		of_readPos_base_stat1 << i + 1 << "\t";
 		of_readPos_base_stat2 << i + 1 << "\t";
@@ -422,18 +422,18 @@ void peProcess::print_stat()
 		float clean1_cur_pos_total_base = 0;
 		float raw2_cur_pos_total_base = 0;
 		float clean2_cur_pos_total_base = 0;
-		for (int j = 0; j != base_set.size(); j++)
+		for (uint64_t j = 0; j != base_set.size(); j++)
 		{
 			raw1_cur_pos_total_base += gv.raw1_stat.bs.position_acgt_content[i][j];
 			raw2_cur_pos_total_base += gv.raw2_stat.bs.position_acgt_content[i][j];
 			clean1_cur_pos_total_base += gv.clean1_stat.bs.position_acgt_content[i][j];
 			clean2_cur_pos_total_base += gv.clean2_stat.bs.position_acgt_content[i][j];
 		}
-		for (int j = 0; j != base_set.size(); j++)
+		for (uint64_t j = 0; j != base_set.size(); j++)
 		{
 			of_readPos_base_stat1 << setiosflags(ios::fixed) << setprecision(2) << 100 * (float)gv.raw1_stat.bs.position_acgt_content[i][j] / raw1_cur_pos_total_base << "%\t";
 		}
-		for (int j = 0; j != base_set.size(); j++)
+		for (uint64_t j = 0; j != base_set.size(); j++)
 		{
 			of_readPos_base_stat1 << setiosflags(ios::fixed) << setprecision(2) << 100 * (float)gv.clean1_stat.bs.position_acgt_content[i][j] / clean1_cur_pos_total_base << "%";
 			if (base_set[j] != 'N')
@@ -445,11 +445,11 @@ void peProcess::print_stat()
 				of_readPos_base_stat1 << endl;
 			}
 		}
-		for (int j = 0; j != base_set.size(); j++)
+		for (uint64_t j = 0; j != base_set.size(); j++)
 		{
 			of_readPos_base_stat2 << setiosflags(ios::fixed) << setprecision(2) << 100 * (float)gv.raw2_stat.bs.position_acgt_content[i][j] / raw2_cur_pos_total_base << "%\t";
 		}
-		for (int j = 0; j != base_set.size(); j++)
+		for (uint64_t j = 0; j != base_set.size(); j++)
 		{
 			of_readPos_base_stat2 << setiosflags(ios::fixed) << setprecision(2) << 100 * (float)gv.clean2_stat.bs.position_acgt_content[i][j] / clean2_cur_pos_total_base << "%";
 			if (base_set[j] != 'N')
@@ -470,9 +470,9 @@ void peProcess::print_stat()
 	of_readPos_qual_stat1 << "Pos\t";
 	of_readPos_qual_stat2 << "Pos\t";
 	int max_qual = 0;
-	for (int i = 0; i < gv.raw1_stat.gs.read_length; i++)
+	for (uint64_t i = 0; i < gv.raw1_stat.gs.read_length; i++)
 	{
-		for (int j = 1; j <= gp.maxBaseQuality; j++)
+		for (uint64_t j = 1; j <= gp.maxBaseQuality; j++)
 		{
 			if (gv.raw1_stat.qs.position_qual[i][j] > 0)
 			{
@@ -480,7 +480,7 @@ void peProcess::print_stat()
 			}
 		}
 	}
-	for (int i = 0; i <= max_qual; i++)
+	for (uint64_t i = 0; i <= max_qual; i++)
 	{
 		of_readPos_qual_stat1 << "Q" << i << "\t";
 		of_readPos_qual_stat2 << "Q" << i << "\t";
@@ -496,14 +496,14 @@ void peProcess::print_stat()
 	float *clean1_q30 = new float[readMaxLength];
 	float *clean2_q20 = new float[readMaxLength];
 	float *clean2_q30 = new float[readMaxLength];
-	for (int i = 0; i != readMaxLength; i++)
+	for (uint64_t i = 0; i != readMaxLength; i++)
 	{
 		of_readPos_qual_stat1 << i + 1 << "\t";
 		of_readPos_qual_stat2 << i + 1 << "\t";
-		long long raw1_q20_num(0), raw1_q30_num(0), raw1_total(0);
-		long long raw2_q20_num(0), raw2_q30_num(0), raw2_total(0);
+		uint64_t raw1_q20_num(0), raw1_q30_num(0), raw1_total(0);
+		uint64_t raw2_q20_num(0), raw2_q30_num(0), raw2_total(0);
 		// int pos_max_qual1(0),pos_max_qual2(0);
-		for (int j = 0; j <= max_qual; j++)
+		for (uint64_t j = 0; j <= max_qual; j++)
 		{
 			if (j >= 20)
 			{
@@ -539,7 +539,7 @@ void peProcess::print_stat()
 	of_readPos_qual_stat2 << "#clean fastq2 quality distribution" << endl;
 	of_readPos_qual_stat1 << "Pos\t";
 	of_readPos_qual_stat2 << "Pos\t";
-	for (int i = 0; i <= max_qual; i++)
+	for (uint64_t i = 0; i <= max_qual; i++)
 	{
 		of_readPos_qual_stat1 << "Q" << i << "\t";
 		of_readPos_qual_stat2 << "Q" << i << "\t";
@@ -549,13 +549,13 @@ void peProcess::print_stat()
 
 	of_q2030_stat1 << "Position in reads\tPercentage of Q20+ bases\tPercentage of Q30+ bases\tPercentage of Clean Q20+\tPercentage of Clean Q30+" << endl;
 	of_q2030_stat2 << "Position in reads\tPercentage of Q20+ bases\tPercentage of Q30+ bases\tPercentage of Clean Q20+\tPercentage of Clean Q30+" << endl;
-	for (int i = 0; i != readMaxLength; i++)
+	for (uint64_t i = 0; i != readMaxLength; i++)
 	{
 		of_readPos_qual_stat1 << i + 1 << "\t";
 		of_readPos_qual_stat2 << i + 1 << "\t";
-		long long clean1_q20_num(0), clean1_q30_num(0), clean1_total(0);
-		long long clean2_q20_num(0), clean2_q30_num(0), clean2_total(0);
-		for (int j = 0; j <= max_qual; j++)
+		uint64_t clean1_q20_num(0), clean1_q30_num(0), clean1_total(0);
+		uint64_t clean2_q20_num(0), clean2_q30_num(0), clean2_total(0);
+		for (uint64_t j = 0; j <= max_qual; j++)
 		{
 			if (j >= 20)
 			{
@@ -602,9 +602,9 @@ void peProcess::print_stat()
 	of_q2030_stat2.close();
 	of_trim_stat1 << "Pos\tHeadLowQual\tHeadFixLen\tTailAdapter\tTailLowQual\tTailFixLen\tCleanHeadLowQual\tCleanHeadFixLen\tCleanTailAdapter\tCleanTailLowQual\tCleanTailFixLen" << endl;
 	of_trim_stat2 << "Pos\tHeadLowQual\tHeadFixLen\tTailAdapter\tTailLowQual\tTailFixLen\tCleanHeadLowQual\tCleanHeadFixLen\tCleanTailAdapter\tCleanTailLowQual\tCleanTailFixLen" << endl;
-	long long head_total1(0), tail_total1(0), head_total2(0), tail_total2(0);
-	long long head_total_clean1(0), tail_total_clean1(0), head_total_clean2(0), tail_total_clean2(0);
-	for (int i = 0; i < gv.raw1_stat.gs.read_length; i++)
+	uint64_t head_total1(0), tail_total1(0), head_total2(0), tail_total2(0);
+	uint64_t head_total_clean1(0), tail_total_clean1(0), head_total_clean2(0), tail_total_clean2(0);
+	for (uint64_t i = 0; i < gv.raw1_stat.gs.read_length; i++)
 	{
 		head_total1 += gv.raw1_stat.ts.ht[i] + gv.raw1_stat.ts.hlq[i];
 		tail_total1 += gv.raw1_stat.ts.ta[i] + gv.raw1_stat.ts.tlq[i] + gv.raw1_stat.ts.tt[i];
@@ -617,7 +617,7 @@ void peProcess::print_stat()
 		// of_trim_stat1<<i+1<<"\t"<<gv.trim1_stat.ts.hlq[i]<<"\t"<<gv.trim1_stat.ts.ht[i]<<"\t"<<gv.trim1_stat.ts.ta[i]
 	}
 	// cout<<head_total_clean1<<"\t"<<tail_total_clean1<<"\t"<<head_total_clean2<<"\t"<<tail_total_clean2<<endl;
-	for (int i = 1; i <= gv.raw1_stat.gs.read_length; i++)
+	for (uint64_t i = 1; i <= gv.raw1_stat.gs.read_length; i++)
 	{
 		of_trim_stat1 << i << "\t";
 		if (head_total1 > 0)
@@ -718,7 +718,7 @@ void peProcess::print_stat()
 	{
 		string barcodeStat = gp.output_dir + "/split_stat_read1.log.txt";
 		ofstream ofBarcodeStat(barcodeStat.c_str());
-		long long totalBarcodeCombinedTypeNum = (long long)((long long)(gp.barcodeNumInList * gp.barcodeNumInList) * gp.barcodeNumInList);
+		uint64_t totalBarcodeCombinedTypeNum = (long long)((long long)(gp.barcodeNumInList * gp.barcodeNumInList) * gp.barcodeNumInList);
 		ofBarcodeStat << "Barcode_types=" << gp.barcodeNumInList << "*" << gp.barcodeNumInList << "*" << gp.barcodeNumInList << "=" << totalBarcodeCombinedTypeNum << endl;
 		float presentBarcodeCombinedTypeRatio = gv.fs.stLFRbarcodeNum.size() * 100.0 / totalBarcodeCombinedTypeNum;
 		ofBarcodeStat << "Real_Barcode_types =" << gv.fs.stLFRbarcodeNum.size() << " (" << presentBarcodeCombinedTypeRatio << " %)" << endl;
@@ -768,15 +768,15 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 
 		string base_set = "ACGTN"; // base content and quality along read position stat
 		int max_qual = 0;
-		for (int i = 0; i != gv.raw1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.raw1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 0; j != base_set.size(); j++)
+			for (uint64_t j = 0; j != base_set.size(); j++)
 			{
 				gv.raw1_stat.bs.position_acgt_content[i][j] += fq1s_stat.bs.position_acgt_content[i][j];
 				gv.raw2_stat.bs.position_acgt_content[i][j] += fq2s_stat.bs.position_acgt_content[i][j];
 			}
 		}
-		for (int i = 0; i != gv.raw1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.raw1_stat.gs.read_max_length; i++)
 		{
 			gv.raw1_stat.ts.ht[i] += fq1s_stat.ts.ht[i];
 			gv.raw1_stat.ts.hlq[i] += fq1s_stat.ts.hlq[i];
@@ -789,9 +789,9 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 			gv.raw2_stat.ts.tlq[i] += fq2s_stat.ts.tlq[i];
 			gv.raw2_stat.ts.ta[i] += fq2s_stat.ts.ta[i];
 		}
-		for (int i = 0; i != gv.raw1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.raw1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 1; j <= gp.maxBaseQuality; j++)
+			for (uint64_t j = 1; j <= gp.maxBaseQuality; j++)
 			{
 				if (fq1s_stat.qs.position_qual[i][j] > 0)
 				{
@@ -800,9 +800,9 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 			}
 		}
 		// cout<<max_qual<<endl;
-		for (int i = 0; i != gv.raw1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.raw1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 0; j <= max_qual; j++)
+			for (uint64_t j = 0; j <= max_qual; j++)
 			{
 				gv.raw1_stat.qs.position_qual[i][j] += fq1s_stat.qs.position_qual[i][j];
 				gv.raw2_stat.qs.position_qual[i][j] += fq2s_stat.qs.position_qual[i][j];
@@ -922,17 +922,17 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 		gv.trim2_stat.gs.q30_num += fq2s_stat.gs.q30_num;
 		int max_qual(0);
 		string base_set = "ACGTN"; // base content and quality along read position stat
-		for (int i = 0; i != gv.trim1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.trim1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 0; j != base_set.size(); j++)
+			for (uint64_t j = 0; j != base_set.size(); j++)
 			{
 				gv.trim1_stat.bs.position_acgt_content[i][j] += fq1s_stat.bs.position_acgt_content[i][j];
 				gv.trim2_stat.bs.position_acgt_content[i][j] += fq2s_stat.bs.position_acgt_content[i][j];
 			}
 		}
-		for (int i = 0; i != gv.trim1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.trim1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 1; j <= gp.maxBaseQuality; j++)
+			for (uint64_t j = 1; j <= gp.maxBaseQuality; j++)
 			{
 				if (fq1s_stat.qs.position_qual[i][j] > 0)
 				{
@@ -940,9 +940,9 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 				}
 			}
 		}
-		for (int i = 0; i != gv.trim1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.trim1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 0; j <= max_qual; j++)
+			for (uint64_t j = 0; j <= max_qual; j++)
 			{
 				gv.trim1_stat.qs.position_qual[i][j] += fq1s_stat.qs.position_qual[i][j];
 				gv.trim2_stat.qs.position_qual[i][j] += fq2s_stat.qs.position_qual[i][j];
@@ -1002,21 +1002,21 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 		gv.clean2_stat.gs.q30_num += fq2s_stat.gs.q30_num;
 		string base_set = "ACGTN"; // base content and quality along read position stat
 		int max_qual1(0), max_qual2(0);
-		for (int i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 0; j != base_set.size(); j++)
+			for (uint64_t j = 0; j != base_set.size(); j++)
 			{
 				gv.clean1_stat.bs.position_acgt_content[i][j] += fq1s_stat.bs.position_acgt_content[i][j];
 			}
 		}
-		for (int i = 0; i != gv.clean2_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.clean2_stat.gs.read_max_length; i++)
 		{
-			for (int j = 0; j != base_set.size(); j++)
+			for (uint64_t j = 0; j != base_set.size(); j++)
 			{
 				gv.clean2_stat.bs.position_acgt_content[i][j] += fq2s_stat.bs.position_acgt_content[i][j];
 			}
 		}
-		for (int i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
 		{
 			gv.clean1_stat.ts.ht[i] += fq1s_stat.ts.ht[i];
 			gv.clean1_stat.ts.hlq[i] += fq1s_stat.ts.hlq[i];
@@ -1024,7 +1024,7 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 			gv.clean1_stat.ts.tlq[i] += fq1s_stat.ts.tlq[i];
 			gv.clean1_stat.ts.ta[i] += fq1s_stat.ts.ta[i];
 		}
-		for (int i = 0; i != gv.clean2_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.clean2_stat.gs.read_max_length; i++)
 		{
 			gv.clean2_stat.ts.ht[i] += fq2s_stat.ts.ht[i];
 			gv.clean2_stat.ts.hlq[i] += fq2s_stat.ts.hlq[i];
@@ -1032,9 +1032,9 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 			gv.clean2_stat.ts.tlq[i] += fq2s_stat.ts.tlq[i];
 			gv.clean2_stat.ts.ta[i] += fq2s_stat.ts.ta[i];
 		}
-		for (int i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 1; j <= gp.maxBaseQuality; j++)
+			for (uint64_t j = 1; j <= gp.maxBaseQuality; j++)
 			{
 				if (fq1s_stat.qs.position_qual[i][j] > 0)
 				{
@@ -1042,16 +1042,16 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 				}
 			}
 		}
-		for (int i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
 		{
-			for (int j = 0; j <= max_qual1; j++)
+			for (uint64_t j = 0; j <= max_qual1; j++)
 			{
 				gv.clean1_stat.qs.position_qual[i][j] += fq1s_stat.qs.position_qual[i][j];
 			}
 		}
-		for (int i = 0; i != gv.clean2_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.clean2_stat.gs.read_max_length; i++)
 		{
-			for (int j = 1; j <= gp.maxBaseQuality; j++)
+			for (uint64_t j = 1; j <= gp.maxBaseQuality; j++)
 			{
 				if (fq2s_stat.qs.position_qual[i][j] > 0)
 				{
@@ -1059,9 +1059,9 @@ void peProcess::update_stat(C_fastq_file_stat &fq1s_stat, C_fastq_file_stat &fq2
 				}
 			}
 		}
-		for (int i = 0; i != gv.clean2_stat.gs.read_max_length; i++)
+		for (uint64_t i = 0; i != gv.clean2_stat.gs.read_max_length; i++)
 		{
-			for (int j = 0; j <= max_qual2; j++)
+			for (uint64_t j = 0; j <= max_qual2; j++)
 			{
 				gv.clean2_stat.qs.position_qual[i][j] += fq2s_stat.qs.position_qual[i][j];
 			}
@@ -1705,7 +1705,7 @@ int peProcess::read(vector<C_fastq> &pe1, vector<C_fastq> &pe2, ifstream &infile
 	int file1_line_num(0), file2_line_num(0);
 	C_fastq fastq1, fastq2;
 	C_fastq_init(fastq1, fastq2);
-	for (int i = 0; i < gp.patchSize * 4; i++)
+	for (uint64_t i = 0; i < gp.patchSize * 4; i++)
 	{
 		if (getline(infile1, buf1))
 		{
@@ -1892,7 +1892,7 @@ void peProcess::thread_process_reads(int index, int cycle, vector<C_fastq> &fq1s
 		else
 		{
 			int diff_num(0);
-			for (int i = 0; i != readid1.size(); i++)
+			for (uint64_t i = 0; i != readid1.size(); i++)
 			{
 				if (readid1[i] != readid2[i])
 				{
@@ -1993,7 +1993,7 @@ void peProcess::thread_process_reads(int index, int cycle, vector<C_fastq> &fq1s
 
 void peProcess::merge_stat()
 {
-	for (int i = 0; i != gp.threads_num; i++)
+	for (uint64_t i = 0; i != gp.threads_num; i++)
 	{
 		update_stat(local_raw_stat1[i], local_raw_stat2[i], local_fs[i], "raw");
 		if (!gp.trim_fq1.empty())
@@ -2058,8 +2058,8 @@ void *peProcess::sub_thread(int index)
 	char buf1[READBUF], buf2[READBUF];
 	C_fastq fastq1, fastq2;
 	C_fastq_init(fastq1, fastq2);
-	long long file1_line_num(0), file2_line_num(0);
-	long long block_line_num1(0), block_line_num2(0);
+	uint64_t file1_line_num(0), file2_line_num(0);
+	uint64_t block_line_num1(0), block_line_num2(0);
 	int thread_read_block = 4 * gp.patchSize * patch;
 	vector<C_fastq> fq1s, fq2s;
 	bool inputGzformat = true;
@@ -2446,7 +2446,7 @@ void peProcess::catRmFile(vector<int> indexes, int cycle, string type, bool gzFo
 	if (indexes.size() > 0)
 	{
 		//        bool subThreadAllDone = true;
-		for (int i = 0; i < gp.threads_num; i++)
+		for (uint64_t i = 0; i < gp.threads_num; i++)
 		{
 			if (sub_thread_done[i] != 1)
 			{
@@ -2497,7 +2497,7 @@ void peProcess::extractReadsToFile(int cycle, int thread_index, int reads_number
 
 		if (position == "head")
 		{
-			for (int i = 0; i < reads_number * 4; i++)
+			for (uint64_t i = 0; i < reads_number * 4; i++)
 			{
 				if (gzgets(gzCleanSmall1, buf1, READBUF) != NULL)
 				{
@@ -2582,7 +2582,7 @@ void peProcess::extractReadsToFile(int cycle, int thread_index, int reads_number
 
 		if (position == "head")
 		{
-			for (int i = 0; i < reads_number * 4; i++)
+			for (uint64_t i = 0; i < reads_number * 4; i++)
 			{
 				if (fgets(buf1, READBUF, nongzCleanSmall1) != NULL)
 				{
@@ -2674,7 +2674,7 @@ void peProcess::extractReadsToFile(int cycle, int thread_index, int reads_number
 
 		if (position == "head")
 		{
-			for (int i = 0; i < reads_number * 4; i++)
+			for (uint64_t i = 0; i < reads_number * 4; i++)
 			{
 				if (gzgets(gzCleanSmall1, buf1, READBUF) != NULL)
 				{
@@ -2708,7 +2708,7 @@ void peProcess::extractReadsToFile(int cycle, int thread_index, int reads_number
 
 		if (position == "head")
 		{
-			for (int i = 0; i < reads_number * 4; i++)
+			for (uint64_t i = 0; i < reads_number * 4; i++)
 			{
 				if (fgets(buf1, READBUF, nongzCleanSmall1) != NULL)
 				{
@@ -2791,7 +2791,7 @@ void *peProcess::smallFilesProcess()
 		while (1)
 		{
 			bool subThreadAllDone = true;
-			for (int i = 0; i < gp.threads_num; i++)
+			for (uint64_t i = 0; i < gp.threads_num; i++)
 			{
 				if (sub_thread_done[i] != 1)
 				{
@@ -2802,16 +2802,16 @@ void *peProcess::smallFilesProcess()
 			if (subThreadAllDone)
 			{
 				int ready_cycles = 0;
-				for (int i = 0; i < gp.threads_num; i++)
+				for (uint64_t i = 0; i < gp.threads_num; i++)
 				{
 					if (readyCleanFiles1[i].size() > ready_cycles)
 					{
 						ready_cycles = readyCleanFiles1[i].size();
 					}
 				}
-				for (int cycle = cur_cat_cycle; cycle < ready_cycles; cycle++)
+				for (uint64_t cycle = cur_cat_cycle; cycle < ready_cycles; cycle++)
 				{
-					for (int i = 0; i < gp.threads_num; i++)
+					for (uint64_t i = 0; i < gp.threads_num; i++)
 					{
 						if (cycle == ready_cycles - 1 && readyCleanFiles1[i].size() < ready_cycles)
 						{
@@ -2865,7 +2865,7 @@ void *peProcess::smallFilesProcess()
 			}
 
 			int ready_cycles = readyCleanFiles1[0].size();
-			for (int i = 1; i < gp.threads_num; i++)
+			for (uint64_t i = 1; i < gp.threads_num; i++)
 			{
 				if (readyCleanFiles1[i].size() < ready_cycles)
 				{
@@ -2873,9 +2873,9 @@ void *peProcess::smallFilesProcess()
 				}
 			}
 
-			for (int cycle = cur_cat_cycle; cycle < ready_cycles; cycle++)
+			for (uint64_t cycle = cur_cat_cycle; cycle < ready_cycles; cycle++)
 			{
-				for (int i = 0; i < gp.threads_num; i++)
+				for (uint64_t i = 0; i < gp.threads_num; i++)
 				{
 
 					if (clean_file_readsNum[i].size() < ready_cycles)
@@ -2932,11 +2932,11 @@ void *peProcess::smallFilesProcess()
 	}
 	else
 	{
-		unsigned long long total_merged_reads_number = 0;
+		uint64_t total_merged_reads_number = 0;
 		while (1)
 		{ // merge small files by input order
 			bool subThreadAllDone = true;
-			for (int i = 0; i < gp.threads_num; i++)
+			for (uint64_t i = 0; i < gp.threads_num; i++)
 			{
 				if (sub_thread_done[i] != 1)
 				{
@@ -2947,18 +2947,18 @@ void *peProcess::smallFilesProcess()
 			if (subThreadAllDone)
 			{
 				int ready_cycles = 0;
-				for (int i = 0; i < gp.threads_num; i++)
+				for (uint64_t i = 0; i < gp.threads_num; i++)
 				{
 					if (readyCleanFiles1[i].size() > ready_cycles)
 					{
 						ready_cycles = readyCleanFiles1[i].size();
 					}
 				}
-				for (int cycle = cur_cat_cycle; cycle < ready_cycles; cycle++)
+				for (uint64_t cycle = cur_cat_cycle; cycle < ready_cycles; cycle++)
 				{
 					//                    reArrangeReads(cycle,gp.cleanOutGzFormat,false,outputFileIndex,cur_avaliable_total_reads_number);
 					vector<int> readyCatFiles;
-					for (int i = 0; i < gp.threads_num; i++)
+					for (uint64_t i = 0; i < gp.threads_num; i++)
 					{
 						if (cycle == ready_cycles - 1 && readyCleanFiles1[i].size() < ready_cycles)
 						{
@@ -2992,18 +2992,18 @@ void *peProcess::smallFilesProcess()
 				break;
 			}
 			int ready_cycles = readyCleanFiles1[0].size();
-			for (int i = 1; i < gp.threads_num; i++)
+			for (uint64_t i = 1; i < gp.threads_num; i++)
 			{
 				if (readyCleanFiles1[i].size() < ready_cycles)
 				{
 					ready_cycles = readyCleanFiles1[i].size();
 				}
 			}
-			for (int cycle = cur_cat_cycle; cycle < ready_cycles; cycle++)
+			for (uint64_t cycle = cur_cat_cycle; cycle < ready_cycles; cycle++)
 			{
 				if (!gp.trim_fq1.empty())
 				{
-					for (int i = 0; i < gp.threads_num; i++)
+					for (uint64_t i = 0; i < gp.threads_num; i++)
 					{
 						catRmFile(i, cycle, "trim", gp.trimOutGzformat);
 					}
@@ -3012,7 +3012,7 @@ void *peProcess::smallFilesProcess()
 				{
 					//                    reArrangeReads(cycle,gp.cleanOutGzFormat,false,outputFileIndex,cur_avaliable_total_reads_number);
 					vector<int> readyCatFiles;
-					for (int i = 0; i < gp.threads_num; i++)
+					for (uint64_t i = 0; i < gp.threads_num; i++)
 					{
 						total_merged_reads_number += clean_file_readsNum[i][cycle];
 						if (!gp.total_reads_num_random && gp.total_reads_num > 0)
@@ -3071,18 +3071,18 @@ void peProcess::process()
 	if (gp.rmdup)
 	{
 		thread t_array[gp.threads_num];
-		for (int i = 0; i < gp.threads_num; i++)
+		for (uint64_t i = 0; i < gp.threads_num; i++)
 		{
 			// t_array[i]=thread(bind(&peProcess::sub_thread_nonssd_multiOut,this,i));
 			t_array[i] = thread(bind(&peProcess::sub_thread_rmdup_step1, this, i));
 		}
-		for (int i = 0; i < gp.threads_num; i++)
+		for (uint64_t i = 0; i < gp.threads_num; i++)
 		{
 			t_array[i].join();
 		}
 		int maxCycle = 0;
 		uint64_t totalReadsNum = 0;
-		for (int i = 0; i < gp.threads_num; i++)
+		for (uint64_t i = 0; i < gp.threads_num; i++)
 		{
 			totalReadsNum += threadReadsNum[i];
 			if (threadData[i].size() > maxCycle)
@@ -3101,11 +3101,11 @@ void peProcess::process()
 		//        int iter=0;
 		uint64_t checkNum = 0;
 		uint64_t *totalTmp = totalData;
-		for (int i = 0; i < maxCycle; i += patch)
+		for (uint64_t i = 0; i < maxCycle; i += patch)
 		{
-			for (int j = 0; j < gp.threads_num; j++)
+			for (uint64_t j = 0; j < gp.threads_num; j++)
 			{
-				for (int k = 0; k < patch; k++)
+				for (uint64_t k = 0; k < patch; k++)
 				{
 					if (threadData[j].size() > i + k)
 					{
@@ -3122,7 +3122,7 @@ void peProcess::process()
 				}
 			}
 		}
-		for (int i = 0; i < gp.threads_num; i++)
+		for (uint64_t i = 0; i < gp.threads_num; i++)
 		{
 			vector<uint64_t *>().swap(threadData[i]);
 			vector<size_t>().swap(threadDataNum[i]);
@@ -3141,7 +3141,7 @@ void peProcess::process()
 		//        }
 		delete dormdup;
 
-		for (int i = 0; i < totalReadsNum; i++)
+		for (uint64_t i = 0; i < totalReadsNum; i++)
 		{
 			if (dupFlag[i])
 			{
@@ -3153,14 +3153,14 @@ void peProcess::process()
 	thread t_array[gp.threads_num];
 	// thread read_monitor(bind(&peProcess::monitor_read_thread,this));
 	// sleep(10);
-	for (int i = 0; i < gp.threads_num; i++)
+	for (uint64_t i = 0; i < gp.threads_num; i++)
 	{
 		// t_array[i]=thread(bind(&peProcess::sub_thread_nonssd_multiOut,this,i));
 		t_array[i] = thread(bind(&peProcess::sub_thread, this, i));
 	}
 	thread catFiles = thread(bind(&peProcess::smallFilesProcess, this));
 
-	for (int i = 0; i < gp.threads_num; i++)
+	for (uint64_t i = 0; i < gp.threads_num; i++)
 	{
 		t_array[i].join();
 	}
@@ -3182,7 +3182,7 @@ void peProcess::process()
 		}
 		else
 		{
-			for (int i = 0; i < gp.threads_num; i++)
+			for (uint64_t i = 0; i < gp.threads_num; i++)
 			{
 				if (dupThreadOut1[i] != NULL && dupThreadOut2[i] != NULL)
 				{
@@ -3202,8 +3202,8 @@ void peProcess::process()
 }
 void peProcess::run_extract_random()
 {
-	long long total_clean_reads(0);
-	for (int i = 0; i != gp.threads_num; i++)
+	uint64_t total_clean_reads(0);
+	for (uint64_t i = 0; i != gp.threads_num; i++)
 	{
 		total_clean_reads += local_clean_stat1[i].gs.reads_number;
 	}
@@ -3366,7 +3366,7 @@ void peProcess::make_tmpDir()
 {
 	srand(time(0));
 	ostringstream tmp_str;
-	for (int i = 0; i != 6; i++)
+	for (uint64_t i = 0; i != 6; i++)
 	{
 		int tmp_rand = random(26) + 'A';
 		tmp_str << (char)tmp_rand;
@@ -3385,7 +3385,7 @@ void peProcess::output_fastqs(string type, vector<C_fastq> &fq1, gzFile outfile)
 	// m.lock();
 	string out_content, streaming_out;
 	int fq1_size = fq1.size();
-	for (int i = 0; i != fq1_size; i++)
+	for (uint64_t i = 0; i != fq1_size; i++)
 	{
 		// for(vector<C_fastq>::iterator i=fq1->begin();i!=fq1->end();i++){
 		if (gp.output_file_type == "fasta")
@@ -3436,7 +3436,7 @@ void peProcess::output_fastqs(string type, vector<C_fastq> &fq1, FILE *outfile)
 	// m.lock();
 	string out_content, streaming_out;
 	int fq1_size = fq1.size();
-	for (int i = 0; i != fq1_size; i++)
+	for (uint64_t i = 0; i != fq1_size; i++)
 	{
 		// for(vector<C_fastq>::iterator i=fq1->begin();i!=fq1->end();i++){
 		if (gp.output_file_type == "fasta")
@@ -3504,28 +3504,28 @@ void peProcess::peStreaming_stat(C_global_variable &local_gv)
 	/*int read_max_length;
 	int read_length;
 	int reads_number;
-	long long base_number;
-	long long a_number,c_number,g_number,t_number,n_number;
-	//long long a_ratio,c_ratio,g_ratio,t_ratio,n_ratio;
-	long long q20_num,q30_num;
+	uint64_t base_number;
+	uint64_t a_number,c_number,g_number,t_number,n_number;
+	//uint64_t a_ratio,c_ratio,g_ratio,t_ratio,n_ratio;
+	uint64_t q20_num,q30_num;
 	*/
 	cout << "#Fq1_statistical_information"
 		 << "\n";
 	cout << local_gv.raw1_stat.gs.read_length << " " << local_gv.clean1_stat.gs.read_length << " " << local_gv.raw1_stat.gs.reads_number << " " << local_gv.clean1_stat.gs.reads_number << " " << local_gv.raw1_stat.gs.base_number << " " << local_gv.clean1_stat.gs.base_number << " " << local_gv.raw1_stat.gs.a_number << " " << local_gv.clean1_stat.gs.a_number << " " << local_gv.raw1_stat.gs.c_number << " " << local_gv.clean1_stat.gs.c_number << " " << local_gv.raw1_stat.gs.g_number << " " << local_gv.clean1_stat.gs.g_number << " " << local_gv.raw1_stat.gs.t_number << " " << local_gv.clean1_stat.gs.t_number << " " << local_gv.raw1_stat.gs.n_number << " " << local_gv.clean1_stat.gs.n_number << " " << local_gv.raw1_stat.gs.q20_num << " " << local_gv.clean1_stat.gs.q20_num << " " << local_gv.raw1_stat.gs.q30_num << " " << local_gv.clean1_stat.gs.q30_num << "\n";
 	cout << "#Base_distributions_by_read_position"
 		 << "\n";
-	// long long position_acgt_content[READ_MAX_LEN][5];
-	for (int i = 0; i != local_gv.raw1_stat.gs.read_length; i++)
+	// uint64_t position_acgt_content[READ_MAX_LEN][5];
+	for (uint64_t i = 0; i != local_gv.raw1_stat.gs.read_length; i++)
 	{
-		for (int j = 0; j != 4; j++)
+		for (uint64_t j = 0; j != 4; j++)
 		{
 			cout << local_gv.raw1_stat.bs.position_acgt_content[i][j] << " ";
 		}
 		cout << local_gv.raw1_stat.bs.position_acgt_content[i][4] << "\n";
 	}
-	for (int i = 0; i != local_gv.clean1_stat.gs.read_length; i++)
+	for (uint64_t i = 0; i != local_gv.clean1_stat.gs.read_length; i++)
 	{
-		for (int j = 0; j != 4; j++)
+		for (uint64_t j = 0; j != 4; j++)
 		{
 			cout << local_gv.clean1_stat.bs.position_acgt_content[i][j] << " ";
 		}
@@ -3534,17 +3534,17 @@ void peProcess::peStreaming_stat(C_global_variable &local_gv)
 	cout << "#Raw_Base_quality_value_distribution_by_read_position"
 		 << "\n";
 	// position_qual[READ_MAX_LEN][gp.maxBaseQuality]
-	for (int i = 0; i != local_gv.raw1_stat.gs.read_length; i++)
+	for (uint64_t i = 0; i != local_gv.raw1_stat.gs.read_length; i++)
 	{
-		for (int j = 0; j != 40; j++)
+		for (uint64_t j = 0; j != 40; j++)
 		{
 			cout << local_gv.clean1_stat.qs.position_qual[i][j] << " ";
 		}
 		cout << "0\n";
 	}
-	for (int i = 0; i != local_gv.clean1_stat.gs.read_length; i++)
+	for (uint64_t i = 0; i != local_gv.clean1_stat.gs.read_length; i++)
 	{
-		for (int j = 0; j != 40; j++)
+		for (uint64_t j = 0; j != 40; j++)
 		{
 			cout << local_gv.clean1_stat.qs.position_qual[i][j] << " ";
 		}
@@ -3555,18 +3555,18 @@ void peProcess::peStreaming_stat(C_global_variable &local_gv)
 	cout << local_gv.raw2_stat.gs.read_length << " " << local_gv.clean2_stat.gs.read_length << " " << local_gv.raw2_stat.gs.reads_number << " " << local_gv.clean2_stat.gs.reads_number << " " << local_gv.raw2_stat.gs.base_number << " " << local_gv.clean2_stat.gs.base_number << " " << local_gv.raw2_stat.gs.a_number << " " << local_gv.clean2_stat.gs.a_number << " " << local_gv.raw2_stat.gs.c_number << " " << local_gv.clean2_stat.gs.c_number << " " << local_gv.raw2_stat.gs.g_number << " " << local_gv.clean2_stat.gs.g_number << " " << local_gv.raw2_stat.gs.t_number << " " << local_gv.clean2_stat.gs.t_number << " " << local_gv.raw2_stat.gs.n_number << " " << local_gv.clean2_stat.gs.n_number << " " << local_gv.raw2_stat.gs.q20_num << " " << local_gv.clean2_stat.gs.q20_num << " " << local_gv.raw2_stat.gs.q30_num << " " << local_gv.clean2_stat.gs.q30_num << "\n";
 	cout << "#Base_distributions_by_read_position"
 		 << "\n";
-	// long long position_acgt_content[READ_MAX_LEN][5];
-	for (int i = 0; i != local_gv.raw2_stat.gs.read_length; i++)
+	// uint64_t position_acgt_content[READ_MAX_LEN][5];
+	for (uint64_t i = 0; i != local_gv.raw2_stat.gs.read_length; i++)
 	{
-		for (int j = 0; j != 4; j++)
+		for (uint64_t j = 0; j != 4; j++)
 		{
 			cout << local_gv.raw2_stat.bs.position_acgt_content[i][j] << " ";
 		}
 		cout << local_gv.raw2_stat.bs.position_acgt_content[i][4] << "\n";
 	}
-	for (int i = 0; i != local_gv.clean2_stat.gs.read_length; i++)
+	for (uint64_t i = 0; i != local_gv.clean2_stat.gs.read_length; i++)
 	{
-		for (int j = 0; j != 4; j++)
+		for (uint64_t j = 0; j != 4; j++)
 		{
 			cout << local_gv.clean2_stat.bs.position_acgt_content[i][j] << " ";
 		}
@@ -3575,17 +3575,17 @@ void peProcess::peStreaming_stat(C_global_variable &local_gv)
 	cout << "#Raw_Base_quality_value_distribution_by_read_position"
 		 << "\n";
 	// position_qual[READ_MAX_LEN][gp.maxBaseQuality]
-	for (int i = 0; i != local_gv.raw2_stat.gs.read_length; i++)
+	for (uint64_t i = 0; i != local_gv.raw2_stat.gs.read_length; i++)
 	{
-		for (int j = 0; j != 41; j++)
+		for (uint64_t j = 0; j != 41; j++)
 		{
 			cout << local_gv.raw2_stat.qs.position_qual[i][j] << " ";
 		}
 		cout << "0\n";
 	}
-	for (int i = 0; i != local_gv.clean2_stat.gs.read_length; i++)
+	for (uint64_t i = 0; i != local_gv.clean2_stat.gs.read_length; i++)
 	{
-		for (int j = 0; j != 41; j++)
+		for (uint64_t j = 0; j != 41; j++)
 		{
 			cout << local_gv.clean2_stat.qs.position_qual[i][j] << " ";
 		}
@@ -3616,8 +3616,8 @@ void *peProcess::sub_thread_rmdup_step1(int index)
 	char buf1[READBUF], buf2[READBUF];
 	C_fastq fastq1, fastq2;
 	C_fastq_init(fastq1, fastq2);
-	long long file1_line_num(0), file2_line_num(0);
-	long long block_line_num1(0), block_line_num2(0);
+	uint64_t file1_line_num(0), file2_line_num(0);
+	uint64_t block_line_num1(0), block_line_num2(0);
 	int thread_read_block = 4 * gp.patchSize * patch;
 	vector<C_fastq> fq1s, fq2s;
 	bool inputGzformat = true;
@@ -3675,7 +3675,7 @@ void *peProcess::sub_thread_rmdup_step1(int index)
 					if (seqs.size() == gp.patchSize)
 					{
 						uint64_t *curData = new uint64_t[seqs.size()];
-						for (int i = 0; i < seqs.size(); i++)
+						for (uint64_t i = 0; i < seqs.size(); i++)
 						{
 							curData[i] = hash<string>()(seqs[i]);
 							//                            MDString(seqs[i].c_str(),curData[i]);
@@ -3698,7 +3698,7 @@ void *peProcess::sub_thread_rmdup_step1(int index)
 				{
 					uint64_t *curData = new uint64_t[seqs.size()];
 					//                    memset(curData,NULL,sizeof(uint64_t)*seqs.size());
-					for (int i = 0; i < seqs.size(); i++)
+					for (uint64_t i = 0; i < seqs.size(); i++)
 					{
 						curData[i] = hash<string>()(seqs[i]);
 						//                        MDString(seqs[i].c_str(),curData[i]);
@@ -3753,7 +3753,7 @@ void *peProcess::sub_thread_rmdup_step1(int index)
 					{
 						uint64_t *curData = new uint64_t[seqs.size()];
 						//                        memset(curData,NULL,sizeof(uint64_t)*seqs.size());
-						for (int i = 0; i < seqs.size(); i++)
+						for (uint64_t i = 0; i < seqs.size(); i++)
 						{
 							curData[i] = hash<string>()(seqs[i]);
 							//                            MDString(seqs[i].c_str(),curData[i]);
@@ -3776,7 +3776,7 @@ void *peProcess::sub_thread_rmdup_step1(int index)
 				{
 					uint64_t *curData = new uint64_t[seqs.size()];
 					//                    memset(curData,NULL,sizeof(uint64_t)*seqs.size());
-					for (int i = 0; i < seqs.size(); i++)
+					for (uint64_t i = 0; i < seqs.size(); i++)
 					{
 						curData[i] = hash<string>()(seqs[i]);
 						//                        MDString(seqs[i].c_str(),curData[i]);

@@ -29,7 +29,7 @@ C_reads_pos_qual_stat::C_reads_pos_qual_stat()
 {
 	for (int i = 0; i != READ_MAX_LEN; i++)
 	{
-		position_qual[i] = new long long[MAX_QUAL];
+		position_qual[i] = new uint64_t[MAX_QUAL];
 		for (int j = 0; j != MAX_QUAL; j++)
 		{
 			position_qual[i][j] = 0;
@@ -40,7 +40,7 @@ C_reads_pos_qual_stat::C_reads_pos_qual_stat(C_global_parameter &gp)
 {
 	for (int i = 0; i != READ_MAX_LEN; i++)
 	{
-		position_qual[i] = new long long[gp.maxBaseQuality];
+		position_qual[i] = new uint64_t[gp.maxBaseQuality];
 		for (int j = 0; j != gp.maxBaseQuality; j++)
 		{
 			position_qual[i][j] = 0;

@@ -148,7 +148,7 @@ void seProcess::print_stat()
 	filter_items.emplace_back("Reads with low mean quality");
 	filter_items.emplace_back("Reads with adapter");
 	filter_items.emplace_back("Reads with global contam sequence");
-	map<string, long long> filter_number;
+	map<string, uint64_t> filter_number;
 	filter_number["Reads are duplicate"] = gv.fs.dupReadsNum;
 	filter_number["Reads with contam sequence"] = gv.fs.include_contam_seq_num;
 	filter_number["Reads with global contam sequence"] = gv.fs.include_global_contam_seq_num;
@@ -163,8 +163,8 @@ void seProcess::print_stat()
 	filter_number["Reads with filtered fov"] = gv.fs.fov_num;
 	filter_number["Reads too long"] = gv.fs.long_len_num;
 	// filter_number["Reads limited to output number"]=gv.fs.output_reads_num;
-	unsigned long long total_filter_fq1_num = 0;
-	for (map<string, long long>::iterator ix = filter_number.begin(); ix != filter_number.end(); ix++)
+	uint64_t total_filter_fq1_num = 0;
+	for (map<string, uint64_t>::iterator ix = filter_number.begin(); ix != filter_number.end(); ix++)
 	{
 		total_filter_fq1_num += ix->second;
 	}
@@ -212,7 +212,7 @@ void seProcess::print_stat()
 	of_general_stat << "Total number of reads\t" << setprecision(15) << gv.raw1_stat.gs.reads_number << " (100.00%)\t"
 					<< gv.clean1_stat.gs.reads_number << " (100.00%)" << endl;
 	of_general_stat << "Number of filtered reads\t" << total_filter_fq1_num << " (" << filter_r1_ratio << "%)\t-" << endl;
-	unsigned long long filter_base1 = total_filter_fq1_num * gv.raw1_stat.gs.read_length;
+	uint64_t filter_base1 = total_filter_fq1_num * gv.raw1_stat.gs.read_length;
 	of_general_stat << "Total number of bases\t" << setprecision(15) << gv.raw1_stat.gs.base_number << " (100.00%)\t"
 					<< gv.clean1_stat.gs.base_number << " (100.00%)" << endl;
 	of_general_stat << "Number of filtered bases\t" << setprecision(15) << filter_base1 << " (" << filter_r1_ratio << "%)\t-" << endl;
@@ -293,7 +293,7 @@ void seProcess::print_stat()
 	for (int i = 0; i != gv.raw1_stat.gs.read_length; i++)
 	{
 		of_readPos_qual_stat1 << i + 1 << "\t";
-		unsigned long long raw1_q20_num(0), raw1_q30_num(0), raw1_total(0);
+		uint64_t raw1_q20_num(0), raw1_q30_num(0), raw1_total(0);
 		for (int j = 0; j <= max_qual; j++)
 		{
 			if (j >= 20)
@@ -329,7 +329,7 @@ void seProcess::print_stat()
 	for (int i = 0; i != gv.clean1_stat.gs.read_max_length; i++)
 	{
 		of_readPos_qual_stat1 << i + 1 << "\t";
-		unsigned long long clean1_q20_num(0), clean1_q30_num(0), clean1_total(0);
+		uint64_t clean1_q20_num(0), clean1_q30_num(0), clean1_total(0);
 		for (int j = 0; j <= max_qual; j++)
 		{
 			if (j >= 20)
@@ -1516,7 +1516,7 @@ void *seProcess::smallFilesProcess()
 	}
 	else
 	{
-		unsigned long long total_merged_reads_number = 0;
+		uint64_t total_merged_reads_number = 0;
 		while (1)
 		{ // merge small files by input order
 
@@ -2041,7 +2041,7 @@ void seProcess::run_extract_random()
 		cerr << "Error:extract random clean reads error cuz parameters are wrong" << endl;
 		exit(1);
 	}
-	unsigned long long total_clean_reads(0);
+	uint64_t total_clean_reads(0);
 	for (int i = 0; i != gp.threads_num; i++)
 	{
 		total_clean_reads += se_local_clean_stat1[i].gs.reads_number;
@@ -2423,7 +2423,7 @@ void seProcess::seStreaming_stat(C_global_variable &local_gv)
 		 << " " << local_gv.raw1_stat.gs.q30_num << " " << local_gv.clean1_stat.gs.q30_num << "\n";
 	cout << "#Base_distributions_by_read_position"
 		 << "\n";
-	// unsigned long long position_acgt_content[READ_MAX_LEN][5];
+	// uint64_t position_acgt_content[READ_MAX_LEN][5];
 	for (int i = 0; i != local_gv.raw1_stat.gs.read_length; i++)
 	{
 		for (int j = 0; j != 4; j++)
